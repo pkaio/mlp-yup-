@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "Ŷ'UP - Wakeboard Community",
+    "slug": "yup-wakeboard",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1e3a8a"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yup.wakeboard"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1e3a8a"
+      },
+      "package": "com.yup.wakeboard",
+      "permissions": [
+        "CAMERA",
+        "CAMERA_ROLL",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permitir que Ŷ'UP acesse suas fotos para enviar vídeos",
+          "cameraPermission": "Permitir que Ŷ'UP acesse sua câmera para gravar vídeos"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permitir que Ŷ'UP acesse sua localização para encontrar parques próximos"
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "http://yupapp.us-east-2.elasticbeanstalk.com/api"
+    }
+  }
+}

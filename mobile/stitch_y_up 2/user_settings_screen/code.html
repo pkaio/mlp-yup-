@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<title>Y'UP - Configurações</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#00bfff",
+            "background-light": "#f5f8f8",
+            "background-dark": "#0d0d0d",
+            "card-light": "#ffffff",
+            "card-dark": "#1a1a1a",
+            "text-light": "#0d0d0d",
+            "text-dark": "#f5f8f8",
+            "text-secondary-light": "#6b7280",
+            "text-secondary-dark": "#9ca3af",
+            "border-light": "#e5e7eb",
+            "border-dark": "#374151"
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "1rem",
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "full": "9999px"
+          },
+          boxShadow: {
+            'subtle': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .switch-bg:after {
+      content: '';
+      @apply absolute top-0.5 left-0.5 bg-white rounded-full h-5 w-5 transition-all;
+    }
+    input:checked+.switch-bg:after {
+      @apply transform translate-x-full;
+    }
+    input:checked + .switch-bg {
+        @apply bg-primary;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark">
+<div class="max-w-md mx-auto min-h-screen flex flex-col">
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm flex items-center justify-between p-4 border-b border-border-light dark:border-border-dark">
+<button class="p-2">
+<svg class="text-text-light dark:text-text-dark" fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+<path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path>
+</svg>
+</button>
+<h1 class="text-lg font-bold">Configurações</h1>
+<button class="p-2 text-primary">
+<svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+<path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+</svg>
+</button>
+</header>
+<main class="flex-grow p-4 space-y-8">
+<section>
+<h2 class="text-xl font-bold mb-4">Perfil do Usuário</h2>
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow-subtle p-6 space-y-6">
+<div class="flex flex-col items-center space-y-4">
+<div class="relative">
+<img alt="Foto do perfil" class="w-24 h-24 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuADb0sg-8kQGKxt3f_oxMF4fGON397cebLXkZmIE1NZDVV0IhmqCGkrzC8kg052zI1pNuJIk7j4YkzdYQXgfeyYRWNxqjU9p9lWgGeit5H_jGm8SqxEqTavg_IvJWa2hbbigRTjeZspqnAtwkpfnJPSvuIVHSslOuJ1KGoT6CwiojQDT6XyJ4lxxekTbQa3nlDZXwomYJYMwa0RU2NKYBPqqbMCrgLrytvzug4uDhYFNARfFoIRm7OPVwPnNNIZpLQ2MdvqQo6ubd-H"/>
+<button class="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full">
+<svg fill="currentColor" height="16" viewBox="0 0 256 256" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"></path></svg>
+</button>
+</div>
+<span class="text-sm font-medium text-primary">Alterar foto</span>
+</div>
+<div class="space-y-4">
+<input class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3 focus:ring-2 focus:ring-primary focus:border-primary transition duration-200" placeholder="Nome" type="text" value="Lucas Silva"/>
+<input class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3 focus:ring-2 focus:ring-primary focus:border-primary transition duration-200" placeholder="@usuário" type="text" value="@lucas_silva"/>
+<textarea class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3 h-24 resize-none focus:ring-2 focus:ring-primary focus:border-primary transition duration-200" placeholder="Bio">Apaixonado por esportes e aventuras ao ar livre.</textarea>
+</div>
+<button class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg hover:bg-primary/90 transition duration-200">
+            Editar Perfil
+          </button>
+</div>
+</section>
+<section>
+<h2 class="text-xl font-bold mb-4">Privacidade e Segurança</h2>
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow-subtle divide-y divide-border-light dark:divide-border-dark">
+<div class="p-4 flex justify-between items-center">
+<span class="font-medium">Conta privada</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/50 switch-bg"></div>
+</label>
+</div>
+<a class="p-4 flex justify-between items-center hover:bg-background-light dark:hover:bg-background-dark/50 transition duration-200" href="#">
+<span class="font-medium">Alterar senha</span>
+<svg class="text-text-secondary-light dark:text-text-secondary-dark" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M94.34,181.66a8,8,0,0,1,0,11.32l-8,8a8,8,0,0,1-11.32,0l-40-40a8,8,0,0,1,0-11.32l40-40a8,8,0,0,1,11.32,11.32L51.31,160l32,32A8,8,0,0,1,94.34,181.66Zm80-152-40,40a8,8,0,0,0,11.32,11.32L184.69,48l32,32a8,8,0,0,0,11.32-11.32Z" opacity="0.2"></path><path d="M173.66,162.34a8,8,0,0,1,0,11.32l-40,40a8,8,0,0,1-11.32-11.32L154.69,170H40a8,8,0,0,1,0-16h114.69l-32.35-32.34a8,8,0,0,1,11.32-11.32Z"></path></svg>
+</a>
+<a class="p-4 flex justify-between items-center hover:bg-background-light dark:hover:bg-background-dark/50 transition duration-200 rounded-b-lg" href="#">
+<span class="font-medium">Ver sessões ativas</span>
+<svg class="text-text-secondary-light dark:text-text-secondary-dark" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M94.34,181.66a8,8,0,0,1,0,11.32l-8,8a8,8,0,0,1-11.32,0l-40-40a8,8,0,0,1,0-11.32l40-40a8,8,0,0,1,11.32,11.32L51.31,160l32,32A8,8,0,0,1,94.34,181.66Zm80-152-40,40a8,8,0,0,0,11.32,11.32L184.69,48l32,32a8,8,0,0,0,11.32-11.32Z" opacity="0.2"></path><path d="M94.34,181.66a8,8,0,0,1,0,11.32l-8,8a8,8,0,0,1-11.32,0l-40-40a8,8,0,0,1,0-11.32l40-40a8,8,0,0,1,11.32,11.32L51.31,160l32,32A8,8,0,0,1,94.34,181.66Zm80-152-40,40a8,8,0,0,0,11.32,11.32L184.69,48l32,32a8,8,0,0,0,11.32-11.32Z"></path></svg>
+</a>
+</div>
+</section>
+<section>
+<h2 class="text-xl font-bold mb-4">Notificações</h2>
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow-subtle divide-y divide-border-light dark:divide-border-dark">
+<div class="p-4 flex justify-between items-center">
+<span class="font-medium">Receber notificações push</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/50 switch-bg"></div>
+</label>
+</div>
+<div class="p-4 flex justify-between items-center">
+<span class="font-medium">Alertas de novos seguidores</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/50 switch-bg"></div>
+</label>
+</div>
+<div class="p-4 flex justify-between items-center">
+<span class="font-medium">Interações com seus vídeos</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/50 switch-bg"></div>
+</label>
+</div>
+</div>
+</section>
+<section>
+<h2 class="text-xl font-bold mb-4">Preferências do App</h2>
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow-subtle divide-y divide-border-light dark:divide-border-dark">
+<div class="p-4 flex justify-between items-center">
+<span class="font-medium">Modo escuro</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/50 switch-bg"></div>
+</label>
+</div>
+<div class="p-4 flex justify-between items-center">
+<span class="font-medium">Idioma automático</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/50 switch-bg"></div>
+</label>
+</div>
+<div class="p-4 flex justify-between items-center">
+<span class="font-medium">Idioma</span>
+<div class="relative">
+<select class="appearance-none bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark rounded-lg py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-primary">
+<option>Português</option>
+<option>English</option>
+<option>Español</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-secondary-light dark:text-text-secondary-dark">
+<svg class="fill-current h-4 w-4" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path></svg>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section>
+<h2 class="text-xl font-bold mb-4">Outros</h2>
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow-subtle">
+<button class="w-full text-red-500 font-bold py-3 px-4 rounded-lg hover:bg-red-500/10 transition duration-200 text-left">
+            Sair da conta
+          </button>
+</div>
+</section>
+<footer class="text-center py-4">
+<p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Y'UP v1.2.0</p>
+</footer>
+</main>
+</div>
+</body></html>

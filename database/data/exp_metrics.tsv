@@ -1,0 +1,34 @@
+code	display	exp_bonus
+spin_180	Spin 180	8
+spin_360	Spin 360	16
+spin_540	Spin 540	24
+spin_720	Spin 720	32
+spin_900	Spin 900	40
+spin_1080	Spin 1080	48
+spin_1260	Spin 1260	56
+spin_1440	Spin 1440	64
+invert	Invert/Flip/Roll	30
+railey	Railey Family	25
+handlepass	Handlepass	20
+blind	Blind Landing	15
+wrapped	Wrapped / Óle	10
+switch	Switch / Revert	10
+grab_indy	Grab Indy	6
+grab_mute	Grab Mute	6
+grab_melon	Grab Melon	6
+grab_stalefish	Grab Stalefish	6
+grab_tail	Grab Tail	6
+grab_nose	Grab Nose	6
+grab_crail	Grab Crail	6
+grab_nuclear	Grab Nuclear	6
+grab_seatbelt	Grab Seatbelt	6
+grab_roastbeef	Grab Roast Beef	6
+grab_chickensalad	Grab Chicken Salad	6
+grab_tindy	Grab Tindy	6
+grab_tailfish	Grab Tailfish	6
+grab_method	Grab Method	6
+grab_slob	Grab Slob	6
+rail_press	Rail Press	8
+rail_270_out	Rail 270 Out	10
+rail_450_out	Rail 450+ Out	16
+transfer_gap	Transfer / Gap	18

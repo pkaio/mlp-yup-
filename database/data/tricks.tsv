@@ -1,0 +1,97 @@
+id	nome	nome_curto	categoria	obstaculo	tipo	descricao	variacoes	nivel	tags	exp_base
+1	Heelside	HS	Air Trick	Nenhum	Base	using your heelside edge			air	70
+2	Toesde	TS	Air Trick	Nenhum	Base	using your toesde egde			air	70
+3	Front	FS	Air Trick	Nenhum	Base	side a spin wher the first 90 degrees you face towards the line			air	70
+4	Back	BS	Air Trick	Nenhum	Base	side a spin where the first 90 degrees the rider faces away from the line			air	70
+5	Surface	SF	Air Trick	Nenhum	Base	trick a trick done with the board always in contact with the water			surface	70
+6	Side	SS	Air Trick	Nenhum	Base	slide turning the board FS 90 facing up the line sliding along the water			surface	70
+7	Riding	SW	Grabs	Rampa	Grab	right foot forward)			grab	0
+8	Spin	HP	Grabs	Rampa	Grab	trick)			grab	0
+9	Ther	WR	Grabs	Rampa	Grab	body, this can be added onto a spin trick			grab	0
+10	Baller	BLR	Grabs	Rampa	Grab	handle pass trick by passing the handle between the riders legs			grab,handlepass	0
+11	Placed	OLE	Grabs	Rampa	Grab	above the head			grab	0
+12	Perpendicular	OA	Grabs	Rampa	Grab	to the water			grab	0
+13	180	FS	Grabs	Rampa	Grab	a 180 degree spin where the rider switches foot forward can be			grab,spin	0
+14	Or	BS1	Grabs	Rampa	Grab				grab	0
+15	360	FS	Grabs	Rampa	Grab	where the rider does a 360 degree spin /1 full rotation/. Can be			grab,spin	0
+16	720	FS	Grabs	Rampa	Grab	where the rider does a 720 degree spin /2 full rotations/. Can be			grab,spin	0
+17	900	FS	Grabs	Rampa	Grab	where the rider does a 900 degree spin /2,5 rotations/. Can be			grab,spin	0
+18	Passed	COUNCIL	Air Trick	Nenhum	Spin	or wrapped10SpinsIWWF CABLE WAKEBOARD			air,wrapped	70
+19	1260	FS	Surface	Agua	Base	where the rider does a 1260 degree spin /3,5 rotations/.. Can be			spin,surface	20
+20	Head	RLY	Surface	Agua	Base	in a superman style			surface	20
+21	Above	INV	Surface	Agua	Base	the head in a superman's back lying style			surface	20
+22	Butter	BF	Surface	Agua	Base	fuko a 911 with a FS 180			spin,surface	20
+23	Krypt	KPT	Surface	Agua	Base	a railey where the rider does a FS 180 to land opposite foot forward			railey,spin,surface	20
+24	Side	OHH	Grabs	Rampa	Grab	edge			grab	0
+25	313	BS	Grabs	Rampa	Grab	rewind a railey where the rider does a FS 360 handle pass and rewinds			grab,handlepass,railey,spin	0
+26	180313	REW	Grabs	Rampa	Grab				grab	0
+27	Bs	FS	Grabs	Rampa	Grab	313 rewind a railey where the rider does a BS 360 handle pass and rewinds			grab,handlepass,railey,spin	0
+28	180Bs	REW	Grabs	Rampa	Grab	313			grab	0
+29	Volcan	VLC	Grabs	Rampa	Grab	a S-bend with a rewind frontside 180			grab,spin	0
+30	Double	DS	Grabs	Rampa	Grab	S bend a railey with a BS 720 with the handle above their head			grab,railey,spin	0
+31	S-Mobe	SMOBE	Grabs	Rampa	Grab	an S-bend with a FS handle pass 360			grab,handlepass,invert,spin	0
+32	S-Mobe	SMOBE 5	Grabs	Rampa	Grab	5 an S-bend with a FS handle pass 540			grab,handlepass,invert,spin	0
+33	S-Mobe	REW	Grabs	Rampa	Grab	rewind an S-bend with a FS handle pass 360 with an extra BS 180 SMOBE			grab,handlepass,invert,spin	0
+34	Heart	AT	Grabs	Rampa	Grab	attack an S-bend with a BS handle pass 360 HRT			grab,handlepass,spin	0
+35	Attack	AT	Grabs	Rampa	Grab	HRT			grab	0
+36	5	RUBBE	Grabs	Rampa	Grab	rubber chicken a railey with an ole BS 360			grab,railey,spin,wrapped	0
+37	R	HINT	Grabs	Rampa	Grab	hinterberger a railey with a FS 360 with the handle above their head			grab,railey,spin	0
+38	Hinterberger	HNT 5	Grabs	Rampa	Grab	5 a hinterberger with an extra FS 180			grab,spin	0
+39	Ts	RLY	Grabs	Rampa	Grab	railey TS edge railey TS			grab,railey	0
+40	Forwardts	KPT	Grabs	Rampa	Grab				grab	0
+41	Cab	BR	Rails / Boxes / Sliders	Rail / Box	Slide	2			rail,slide	28
+42	Half	BRR	Rails / Boxes / Sliders	Rail / Box	Slide	2			rail,slide	28
+43	Mobe	MOBE	Rails / Boxes / Sliders	Rail / Box	Slide	a back roll with a FS 360			invert,rail,slide,spin	28
+44	Mobe	MOBE 5	Rails / Boxes / Sliders	Rail / Box	Slide	5 a back roll with a FS 540 handle pass			handlepass,invert,rail,slide,spin	28
+45	Mobe	MOBE 7	Rails / Boxes / Sliders	Rail / Box	Slide	7 a back roll with a FS 720 handle pass			handlepass,invert,rail,slide,spin	28
+46	Kgb	KGB	Rails / Boxes / Sliders	Rail / Box	Slide	a back roll with a BS 360 handle pass			handlepass,invert,rail,slide,spin	28
+47	Kgb	KGB 5	Rails / Boxes / Sliders	Rail / Box	Slide	5 a back roll with a BS 540 handle pass			handlepass,invert,rail,slide,spin	28
+48	Big	MAC	Rails / Boxes / Sliders	Rail / Box	Slide	Mac Ole KGB			rail,slide,wrapped	28
+49	Ts	BR	Rails / Boxes / Sliders	Rail / Box	Slide	back roll a TS backflip (tantrum) TS			invert,rail,slide	28
+50	Pete	PETE	Rails / Boxes / Sliders	Rail / Box	Slide	rose a TS backroll with a FS 360			invert,rail,slide,spin	28
+51	Pete	PETE5	Rails / Boxes / Sliders	Rail / Box	Slide	rose 5 a TS backroll with a FS 540			invert,rail,slide,spin	28
+52	Pete	PETE7	Rails / Boxes / Sliders	Rail / Box	Slide	rose 7 a TS backroll with a FS 720			invert,rail,slide,spin	28
+53	Front	FF	Rails / Boxes / Sliders	Rail / Box	Slide	flip HS approach where the rider flips tail over nose (cartwheel)			invert,rail,slide	28
+54	Front	FBM	Rails / Boxes / Sliders	Rail / Box	Slide	blind mobe a front flip with a BS handle pass 360			blind,handlepass,invert,rail,slide,spin	28
+55	Mobe	SLIM 5	Rails / Boxes / Sliders	Rail / Box	Slide				invert,rail,slide	28
+56	Front	FR	Rails / Boxes / Sliders	Rail / Box	Slide	roll a TS front roll with the board rotating heel over toe			invert,rail,slide	28
+57	Scarcrow	SC	Rails / Boxes / Sliders	Rail / Box	Slide	a TS front roll with a FS 180			invert,rail,slide,spin	28
+58	Elephant	FANT	Rails / Boxes / Sliders	Rail / Box	Slide	a scarcrow with a rewind 180 landng origional foot forward			rail,slide,spin	28
+59	R	CM5	Rails / Boxes / Sliders	Rail / Box	Slide	5			rail	28
+60	Crow	CM7	Rails / Boxes / Sliders	Rail / Box	Slide	mobe 7 a TS front roll with a handle pass FS 720			handlepass,invert,rail,slide,spin	28
+61	Tootsie	TOOTS	Rails / Boxes / Sliders	Rail / Box	Slide	a TS front roll with a BS handle pass180			handlepass,invert,rail,slide	28
+62	Dum	DUM	Rails / Boxes / Sliders	Rail / Box	Slide	dum a TS front roll with a BS handle pass 360			handlepass,invert,rail,slide,spin	28
+63	Mexican	MEX	Rails / Boxes / Sliders	Rail / Box	Slide	roll HS front roll heel edge over toe edge			invert,rail,slide	28
+64	East	EMOBE	Rails / Boxes / Sliders	Rail / Box	Slide	mobe a TS front roll with FS 360 rewinded with BS 180			invert,rail,slide,spin	28
+65	Tantrum	TAN	Rails / Boxes / Sliders	Rail / Box	Slide	a HS back roll			invert,rail,slide	28
+66	Double	TAN	Rails / Boxes / Sliders	Rail / Box	Slide	tantrum a double HS back roll 2			invert,rail,slide	28
+67	Moby	MOBY	Rails / Boxes / Sliders	Rail / Box	Slide	dick a tantrum with a BS handle pass 360			handlepass,invert,rail,slide,spin	28
+68	Moby	MOBY 5	Rails / Boxes / Sliders	Rail / Box	Slide	dick 5 a tantrum with a BS handle pass 540			handlepass,invert,rail,slide,spin	28
+69	Moby	MOBY 7	Rails / Boxes / Sliders	Rail / Box	Slide	dick 7 a tantrum with a BS handle pass 720			handlepass,invert,rail,slide,spin	28
+70	Wirly	WHIRY	Rails / Boxes / Sliders	Rail / Box	Slide	bird a tantrum with a BS ole 360			invert,rail,slide,spin,wrapped	28
+71	Whirly	WHIRL	Rails / Boxes / Sliders	Rail / Box	Slide	5 a whirly bird with an extra BS 180			rail,slide,spin	28
+72	Y	WHIRL	Rails / Boxes / Sliders	Rail / Box	Slide	5 whirly dick a whirly bird with a handle pass BS 360			handlepass,rail,slide,spin	28
+73	Bell	BELL	Air Trick	Nenhum	Invert	air a heelside back flip releasing from the water off your toesde rail			air,invert	70
+74	Bell	BELL 2	Air Trick	Nenhum	Invert	air to fakie bell air FS 180			air,spin	70
+75	F	BELL 2	Air Trick	Nenhum	Invert	bell air to blind bell air BS 180			air,blind,spin	70
+76	B	MOBY	Air Trick	Nenhum	Invert	moby dick a bell air with a BS handle pass 360			air,handlepass,spin	70
+77	Tweetie	TWEET	Air Trick	Nenhum	Invert	a whirly bird off a bell air edge			air	85
+78	5	TWEET	Air Trick	Nenhum	Invert	tweetie dick a tweetie bird with a BS handle pass 360			air,handlepass,spin	70
+79	D	BEN	Air Trick	Nenhum	Invert	Ben air a front roll releasing from the water off your heelside edge			air,invert	70
+80	Egg	EGG	Air Trick	Nenhum	Invert	roll a scare crow releasing from the water off your heelside edge			air,invert	70
+81	Indy	IN	Air Trick	Nenhum	Invert	Back hand between the feet toeside edge			air	70
+82	Tindy	TIN	Air Trick	Nenhum	Invert	Back hand toeside edge between back foot and the tail of the board			air	70
+83	Tail	TAIL	Air Trick	Nenhum	Invert	Back hand, grab tail edge of the board			air	70
+84	Stalefish	STALE	Air Trick	Nenhum	Invert	Back hand heelside edge between the bindings			air	70
+85	Melon	MEL	Air Trick	Nenhum	Invert	Front hand heelside edge between the bindings			air	70
+86	Mute	MUTE	Air Trick	Nenhum	Invert	Front hand toeside edge between the bindings			air	70
+87	Backside	METH	Air Trick	Nenhum	Invert	tweak			air	70
+88	Nose	NOSE	Air Trick	Nenhum	Invert	Front hand, grab nose edge of the board			air	70
+89	Slob	SL	Air Trick	Nenhum	Invert	Front hand toeside edge between front foot and the nose			air	70
+90	Nuclear	NUKE	Air Trick	Nenhum	Invert	Back hand, heelside edge between the front binding and the nose			air	70
+91	The	SB	Air Trick	Nenhum	Invert	board			air	70
+92	Facing	BB	Air Trick	Nenhum	Invert	up the line			air	70
+93	Up	FL	Air Trick	Nenhum	Invert	the line			air	70
+94	Away	BL	Air Trick	Nenhum	Invert	from the line			air	70
+95	Facing	FB	Air Trick	Nenhum	Invert	away from the line			air	70
+96	Gap	GAP	Air Trick	Nenhum	Invert	A jump performed from rail to the same rail			air	70
