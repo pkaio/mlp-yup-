@@ -65,4 +65,30 @@ export const authService = {
       throw error;
     }
   },
+
+  // Verify email with code
+  verifyEmail: async (email, code) => {
+    try {
+      const response = await api.post('/auth/verify-email', { email, code });
+      return response.data;
+    } catch (error) {
+      if (error.response?.data?.error) {
+        return { error: error.response.data.error };
+      }
+      throw error;
+    }
+  },
+
+  // Resend verification code
+  resendVerification: async (email) => {
+    try {
+      const response = await api.post('/auth/resend-verification', { email });
+      return response.data;
+    } catch (error) {
+      if (error.response?.data?.error) {
+        return { error: error.response.data.error };
+      }
+      throw error;
+    }
+  },
 };

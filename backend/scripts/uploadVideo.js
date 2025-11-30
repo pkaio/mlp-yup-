@@ -9,15 +9,19 @@ const PASSWORD = process.env.API_PASSWORD || 'Yup@2025';
 
 const usage = () => {
   console.log('Uso:');
-  console.log('  API_EMAIL=seu_email API_PASSWORD=sua_senha node scripts/uploadVideo.js /caminho/video.mp4');
+  console.log('  API_EMAIL=seu_email API_PASSWORD=sua_senha node scripts/uploadVideo.js /caminho/video.mp4 \"manobra\" [tipo]');
   console.log('');
   console.log('Variáveis opcionais:');
   console.log('  API_BASE_URL  -> base da API (padrão: http://yupapp.us-east-2.elasticbeanstalk.com)');
+  console.log('Argumentos:');
+  console.log('  "manobra"  -> texto que descreve a manobra (padrão: "Upload automático")');
+  console.log('  tipo        -> rail | kicker | air | surface (padrão: rail)');
 };
 
 const main = async () => {
   const filePath = process.argv[2];
-  const description = process.argv[3] || 'Upload automático';
+  const maneuverName = process.argv[3] || 'Upload automático';
+  const maneuverType = (process.argv[4] || 'rail').toLowerCase();
 
   if (!filePath) {
     console.error('❌ Caminho do arquivo não informado.');
@@ -51,7 +55,8 @@ const main = async () => {
   console.log('📤 Enviando vídeo...');
   const form = new FormData();
   form.append('video', fs.createReadStream(resolvedPath));
-  form.append('description', description);
+  form.append('maneuverName', maneuverName);
+  form.append('maneuverType', maneuverType);
 
   const uploadResponse = await fetch(`${API_BASE}/api/videos`, {
     method: 'POST',

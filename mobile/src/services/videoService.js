@@ -7,6 +7,24 @@ const FEED_CACHE_META = 'feed_cache_meta';
 const MAX_CACHE_PAGES = 3;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
 
+const applyDisplayNameFallback = (video) => {
+  if (!video) return video;
+  const payloadDisplay =
+    video.maneuver_payload?.displayName ||
+    video.maneuver_payload?.display_name ||
+    null;
+
+  if (!video.maneuver_display_name && payloadDisplay) {
+    video.maneuver_display_name = payloadDisplay;
+  }
+
+  if (!video.trick_short_name && payloadDisplay) {
+    video.trick_short_name = payloadDisplay;
+  }
+
+  return video;
+};
+
 export const videoService = {
   
   API_BASE_URL:
@@ -43,9 +61,13 @@ export const videoService = {
       return { ...cachedPayload, fromCache: true };
     }
 
-    try {
-      const response = await api.get(`/videos?page=${page}&limit=${limit}`);
+      try {
+        const response = await api.get(`/videos?page=${page}&limit=${limit}`);
       const payload = response.data;
+
+      if (Array.isArray(payload?.videos)) {
+        payload.videos = payload.videos.map((video) => applyDisplayNameFallback(video));
+      }
 
       try {
         await AsyncStorage.setItem(
@@ -66,7 +88,22 @@ export const videoService = {
     }
   },
 
-  trimFeedCache: async (latestPage, limit) => {
+    clearFeedCache: async () => {
+    try {
+      const metaString = await AsyncStorage.getItem(FEED_CACHE_META);
+      if (metaString) {
+        const meta = JSON.parse(metaString);
+        if (Array.isArray(meta?.keys)) {
+          await Promise.all(meta.keys.map((key) => AsyncStorage.removeItem(key)));
+        }
+      }
+      await AsyncStorage.removeItem(FEED_CACHE_META);
+    } catch (error) {
+      console.warn('Erro ao limpar cache do feed:', error);
+    }
+  },
+
+trimFeedCache: async (latestPage, limit) => {
     try {
       const metaString = await AsyncStorage.getItem(FEED_CACHE_META);
       let meta = metaString ? JSON.parse(metaString) : { keys: [] };
@@ -97,7 +134,11 @@ export const videoService = {
       const response = await api.get(
         `/videos/obstacle/${obstacleId}?page=${page}&limit=${limit}`
       );
-      return response.data;
+      const payload = response.data;
+      if (Array.isArray(payload?.videos)) {
+        payload.videos = payload.videos.map((video) => applyDisplayNameFallback(video));
+      }
+      return payload;
     } catch (error) {
       throw error;
     }
@@ -107,7 +148,7 @@ export const videoService = {
   getVideoById: async (videoId) => {
     try {
       const response = await api.get(`/videos/${videoId}`);
-      return response.data;
+      return applyDisplayNameFallback(response.data);
     } catch (error) {
       throw error;
     }
@@ -117,6 +158,9 @@ export const videoService = {
   uploadVideo: async (videoData) => {
     try {
       const formData = new FormData();
+      const clientUploadId =
+        videoData.clientUploadId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      videoData.clientUploadId = clientUploadId;
       
       // Add video file
       if (videoData.videoFile) {
@@ -128,14 +172,35 @@ export const videoService = {
       }
 
       // Add other fields
-      if (videoData.description) {
-        formData.append('description', videoData.description);
+      if (videoData.maneuverType) {
+        formData.append('maneuverType', videoData.maneuverType);
+      }
+      if (videoData.maneuverName) {
+        formData.append('maneuverName', videoData.maneuverName);
+      }
+      if (videoData.maneuverDisplayName) {
+        formData.append('maneuverDisplayName', videoData.maneuverDisplayName);
+      }
+      if (videoData.trickShortName) {
+        formData.append('trickShortName', videoData.trickShortName);
+      }
+      if (videoData.maneuverPayload) {
+        formData.append('maneuverPayload', JSON.stringify(videoData.maneuverPayload));
+      }
+      if (videoData.expPayload) {
+        formData.append('expPayload', JSON.stringify(videoData.expPayload));
       }
       if (videoData.parkId) {
         formData.append('parkId', videoData.parkId);
       }
       if (videoData.obstacleId) {
         formData.append('obstacleId', videoData.obstacleId);
+      }
+      if (videoData.questNodeId) {
+        formData.append('questNodeId', videoData.questNodeId);
+      }
+      if (clientUploadId) {
+        formData.append('clientUploadId', clientUploadId);
       }
 
       const response = await api.post('/videos', formData, {

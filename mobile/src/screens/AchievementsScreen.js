@@ -1,16 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import YupHeader from '../components/ui/YupHeader';
 import YupCard from '../components/ui/YupCard';
 import YupBadge from '../components/ui/YupBadge';
 import YupSectionHeader from '../components/ui/YupSectionHeader';
+import YupButton from '../components/ui/YupButton';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import { badgeService } from '../services/badgeService';
 import { challengeService } from '../services/challengeService';
 import { useAuth } from '../context/AuthContext';
+import {
+  deriveManeuverType,
+  ensureManeuverPayload,
+  parseManeuverPayload
+} from '../utils/maneuver';
+const Icon = MaterialIcons;
 
 const CATEGORY_FILTERS = [
   { id: 'all', label: 'Todas', icon: 'apps' },
@@ -85,6 +93,7 @@ const formatMonthLabel = (month) => {
 
 export default function AchievementsScreen() {
   const { user } = useAuth();
+  const navigation = useNavigation();
   const [badges, setBadges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -94,6 +103,7 @@ export default function AchievementsScreen() {
   const [loadingPassChallenges, setLoadingPassChallenges] = useState(true);
   const [passError, setPassError] = useState(null);
   const [passChallengesError, setPassChallengesError] = useState(null);
+  const [joiningPassId, setJoiningPassId] = useState(null);
   const currentMonth = new Date().getMonth() + 1;
 
   useEffect(() => {
@@ -143,6 +153,45 @@ export default function AchievementsScreen() {
     }
   };
 
+  const handleJoinPass = useCallback(
+    async (passId) => {
+      if (!passId) {
+        return;
+      }
+
+      try {
+        setJoiningPassId(passId);
+        const data = await challengeService.joinMonthlyPass(passId);
+        const joinedAt = data?.membership?.joined_at ?? new Date().toISOString();
+
+        setMonthlyPasses((prev) =>
+          prev.map((pass) =>
+            pass.id === passId
+              ? {
+                  ...pass,
+                  isJoined: true,
+                  joinedAt,
+                  joined_at: joinedAt,
+                }
+              : pass
+          )
+        );
+
+        Alert.alert('Tudo certo!', 'Você agora participa deste passe.');
+      } catch (error) {
+        console.error('Erro ao entrar no passe:', error);
+        const message =
+          error?.response?.data?.error ||
+          error?.message ||
+          'Não foi possível entrar neste passe. Tente novamente.';
+        Alert.alert('Erro', message);
+      } finally {
+        setJoiningPassId(null);
+      }
+    },
+    [setMonthlyPasses]
+  );
+
   const filteredBadges = useMemo(() => {
     if (selectedFilter === 'all') return badges;
     return badges.filter((badge) => badge.category === selectedFilter);
@@ -167,15 +216,24 @@ export default function AchievementsScreen() {
       if (!passId) return;
 
       const difficultyLabel = challenge?.difficulty || DIFFICULTY_FALLBACK;
+      const rewardXp = Number(challenge?.reward_xp ?? 0);
+      let maneuverPayload = parseManeuverPayload(challenge?.maneuver_payload);
+      maneuverPayload = maneuverPayload ? ensureManeuverPayload(maneuverPayload) : null;
+      const maneuverType = deriveManeuverType({
+        maneuverType: challenge?.maneuver_type,
+        specialization: challenge?.specialization
+      });
       const normalized = {
         id: challenge?.id ?? `${passId}-${Math.random().toString(36).slice(2, 8)}`,
-        title: challenge?.trick || 'Desafio sem nome',
-        description: challenge?.description || '',
+        title: (challenge?.maneuver_name || '').trim() || 'Desafio sem nome',
+        description: rewardXp > 0 ? `${rewardXp} XP` : '',
         difficulty: difficultyLabel,
         passName: challenge?.monthly_pass_name || challenge?.season_pass_name || 'Monthly pass',
         parkName: challenge?.park_name || null,
         seasonName: challenge?.season_name || null,
         createdAt: challenge?.created_at || null,
+        maneuverPayload,
+        maneuverType,
       };
 
       if (!grouped[passId]) {
@@ -209,6 +267,7 @@ export default function AchievementsScreen() {
 
   const activePasses = useMemo(() => {
     if (!monthlyPasses.length) return [];
+
     const sorted = [...monthlyPasses].sort((a, b) => {
       const monthA = typeof a?.month === 'number' ? a.month : 13;
       const monthB = typeof b?.month === 'number' ? b.month : 13;
@@ -217,6 +276,11 @@ export default function AchievementsScreen() {
       }
       return (a?.name || '').localeCompare(b?.name || '');
     });
+
+    const joined = sorted.filter((pass) => pass?.isJoined);
+    if (joined.length > 0) {
+      return joined;
+    }
 
     const inCurrentMonth = sorted.filter((pass) => pass?.month === currentMonth);
     if (inCurrentMonth.length > 0) {
@@ -272,6 +336,52 @@ export default function AchievementsScreen() {
       >
         <YupHeader title="Achievements" showBackButton />
 
+        {/* Skill Tree Access Card */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('SkillTree')}
+          style={{ marginHorizontal: spacing.lg, marginTop: spacing.md, marginBottom: spacing.lg }}
+        >
+          <LinearGradient
+            colors={[colors.primary, colors.primaryHover]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderRadius: radii.md,
+              padding: spacing.lg,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+                <MaterialIcons name="account-tree" size={24} color={colors.textPrimary} />
+                <Text
+                  style={{
+                    fontSize: typography.sizes.xl,
+                    fontWeight: typography.weights.bold,
+                    color: colors.textPrimary,
+                    marginLeft: spacing.sm,
+                  }}
+                >
+                  Skill Tree
+                </Text>
+              </View>
+              <Text
+                style={{
+                  fontSize: typography.sizes.sm,
+                  color: 'rgba(245, 245, 245, 0.85)',
+                  lineHeight: typography.sizes.sm * 1.4,
+                }}
+              >
+                Aprenda nomenclaturas e evolua suas habilidades passo a passo
+              </Text>
+            </View>
+            <MaterialIcons name="arrow-forward" size={28} color={colors.textPrimary} />
+          </LinearGradient>
+        </TouchableOpacity>
+
         <TouchableOpacity activeOpacity={0.85} onPress={() => setSelectedFilter('all')}>
           <YupCard style={styles.passportCard}>
             <View style={styles.passportTop}>
@@ -279,7 +389,7 @@ export default function AchievementsScreen() {
                 <Image source={{ uri: user.profile_image_url }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarFallback}>
-                  <Icon name="person" size={32} color={colors.textPrimary} />
+                  <MaterialIcons name="person" size={32} color={colors.textPrimary} />
                 </View>
               )}
               <View style={styles.passportInfo}>
@@ -387,6 +497,23 @@ export default function AchievementsScreen() {
                     </View>
                   </View>
 
+                  <View style={styles.passActions}>
+                    {pass.isJoined ? (
+                      <View style={styles.passJoinedBadge}>
+                        <MaterialIcons name="check-circle" size={18} color={colors.success} />
+                        <Text style={styles.passJoinedText}>Você está inscrito</Text>
+                      </View>
+                    ) : (
+                      <YupButton
+                        title="Entrar neste passe"
+                        onPress={() => handleJoinPass(pass.id)}
+                        isLoading={joiningPassId === pass.id}
+                        fullWidth={false}
+                        style={styles.passJoinButton}
+                      />
+                    )}
+                  </View>
+
                   {pass.description ? (
                     <Text style={styles.passDescription} numberOfLines={2}>
                       {pass.description}
@@ -432,12 +559,41 @@ export default function AchievementsScreen() {
                                 </Text>
                               ) : null}
                             </View>
+                            <TouchableOpacity
+                              style={styles.passChallengeButton}
+                              activeOpacity={0.85}
+                              onPress={() => {
+                                if (!challenge.maneuverPayload) {
+                                  Alert.alert(
+                                    'Configuração indisponível',
+                                    'Este desafio ainda não possui a manobra configurada. Atualize o painel de desafios e tente novamente.'
+                                  );
+                                  return;
+                                }
+                                navigation.navigate('QuickUpload', {
+                                  presetChallenge: {
+                                    challengeId: challenge.id,
+                                    maneuverName: challenge.title,
+                                    difficulty: challenge.difficulty,
+                                    parkName: challenge.parkName,
+                                    parkId: pass.park_id,
+                                    obstacleId: pass.obstacle_id,
+                                    maneuverPayload: challenge.maneuverPayload,
+                                    maneuverType: challenge.maneuverType,
+                                    rewardXp: challenge.rewardXp,
+                                  },
+                                });
+                              }}
+                            >
+                              <MaterialIcons name="videocam" size={16} color={colors.textPrimary} />
+                              <Text style={styles.passChallengeButtonText}>Registrar</Text>
+                            </TouchableOpacity>
                           </View>
                         );
                       })
                     ) : (
                       <View style={styles.passChallengeEmpty}>
-                        <Icon name="emoji-events" size={20} color={colors.textSecondary} />
+                        <MaterialIcons name="emoji-events" size={20} color={colors.textSecondary} />
                         <Text style={styles.passChallengeEmptyText}>
                           Nenhum desafio cadastrado para este passe ainda.
                         </Text>
@@ -456,7 +612,7 @@ export default function AchievementsScreen() {
             })
           ) : (
             <YupCard style={styles.passEmptyCard}>
-              <Icon name="event-busy" size={28} color={colors.textSecondary} />
+              <MaterialIcons name="event-busy" size={28} color={colors.textSecondary} />
               <Text style={styles.passEmptyTitle}>Nenhum passe ativo encontrado</Text>
               <Text style={styles.passEmptySubtitle}>
                 Assim que um novo monthly pass for liberado, os desafios aparecerão aqui.
@@ -482,7 +638,7 @@ export default function AchievementsScreen() {
               return (
                 <YupCard key={badge.id} style={styles.badgeCard}>
                   <View style={styles.badgeHeader}>
-                    <Icon name="emoji-events" size={28} color={colors.primary} />
+                    <MaterialIcons name="emoji-events" size={28} color={colors.primary} />
                     <YupBadge variant="neutral" style={styles.badgeCategory}>
                       {badge.category?.replace('_', ' ') || 'Badge'}
                     </YupBadge>
@@ -495,7 +651,7 @@ export default function AchievementsScreen() {
                   </Text>
                   <View style={styles.badgeFooter}>
                     <View style={styles.badgeMeta}>
-                      <Icon name="calendar-today" size={16} color={colors.textSecondary} />
+                      <MaterialIcons name="calendar-today" size={16} color={colors.textSecondary} />
                       <Text style={styles.badgeMetaText}>Conquistado em {formatDate(badge.earned_at)}</Text>
                     </View>
                     <View style={styles.rarityPill}>
@@ -515,7 +671,7 @@ export default function AchievementsScreen() {
           </View>
         ) : (
           <YupCard style={styles.emptyCard}>
-            <Icon name="emoji-events" size={48} color="rgba(255,255,255,0.35)" />
+            <MaterialIcons name="emoji-events" size={48} color="rgba(255,255,255,0.35)" />
             <Text style={styles.emptyTitle}>Nada por aqui ainda</Text>
             <Text style={styles.emptySubtitle}>
               Participe de desafios, registre sessões em novos parques e conclua missões para desbloquear badges exclusivas.
@@ -728,6 +884,31 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold,
   },
+  passActions: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passJoinButton: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+  },
+  passJoinedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  passJoinedText: {
+    color: colors.success,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    marginLeft: spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
   passDescription: {
     color: colors.textSecondary,
     fontSize: typography.sizes.xs,
@@ -738,7 +919,7 @@ const styles = StyleSheet.create({
   },
   passChallengeItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
     borderRadius: radii['2xl'],
     borderWidth: 1,
@@ -776,6 +957,22 @@ const styles = StyleSheet.create({
   passChallengeMeta: {
     color: colors.textSecondary,
     fontSize: typography.sizes.xs,
+  },
+  passChallengeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  passChallengeButtonText: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   passChallengeEmpty: {
     flexDirection: 'row',

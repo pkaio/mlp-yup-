@@ -65,6 +65,13 @@ const requireModerator = (req, res, next) => {
   next();
 };
 
+const requireAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Acesso restrito a administradores' });
+  }
+  next();
+};
+
 const requireSuperModerator = (req, res, next) => {
   if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_moderator')) {
     return res.status(403).json({ error: 'Acesso restrito a super moderadores ou administradores' });
@@ -72,4 +79,4 @@ const requireSuperModerator = (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, optionalAuth, requireModerator, requireSuperModerator };
+module.exports = { authMiddleware, optionalAuth, requireModerator, requireAdmin, requireSuperModerator };

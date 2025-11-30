@@ -27,7 +27,7 @@ O Ŷ'UP é uma plataforma social gamificada para wakeboard que conecta atletas, 
 - Sistema de progresso e gamificação
 
 ### ✅ 4. Mapa Interativo
-- Mapa mostrando os 3 parques fundadores
+- Mapa mostrando os parques
 - Informações básicas de cada parque
 - Sistema de check-in ao postar vídeo
 - Integração com localização do usuário

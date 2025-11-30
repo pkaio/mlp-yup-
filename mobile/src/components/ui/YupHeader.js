@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, typography } from '../../theme/tokens';
 
@@ -33,7 +33,7 @@ export default function YupHeader({
               style={styles.backButton}
               accessibilityRole="button"
             >
-              <Icon name="arrow-back" size={22} color={colors.textPrimary} />
+              <MaterialIcons name="arrow-back" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
           )
           : <View style={styles.placeholder} />

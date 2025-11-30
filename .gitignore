@@ -1,1 +1,61 @@
-node_modules
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# OS
+.DS_Store
+*.pem
+Thumbs.db
+
+# ENV
+.env
+.env*.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# EAS (Expo Application Services)
+.eas/
+eas.json
+
+# Build artifacts
+build/
+dist/
+*.zip
+*backup*
+
+# Temp folders
+temp*/
+tmp/
+
+# IMPORTANTE: Manter estas pastas versionadas
+# !web/
+# (Descomentar quando reconstruir a pasta web)

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   Image,
   ImageBackground,
   ScrollView,
@@ -11,12 +12,18 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import YupCard from '../components/ui/YupCard';
 import { colors, spacing, typography } from '../theme/tokens';
 import { parkService } from '../services/parkService';
 import { challengeService } from '../services/challengeService';
 import { userService } from '../services/userService';
+import {
+  deriveManeuverType,
+  ensureManeuverPayload,
+  parseManeuverPayload
+} from '../utils/maneuver';
+const Icon = MaterialIcons;
 
 const FILTERS = [
   { id: 'riders', label: 'New Riders', icon: 'person-add' },
@@ -140,10 +147,18 @@ export default function DiscoverScreen({ navigation }) {
     return challenges.map((challenge) => {
       const obstacleIds = normalizeObstacleIds(challenge?.obstacle_ids);
       const difficultyLabel = challenge?.difficulty || DIFFICULTY_FALLBACK;
+      const maneuverName = (challenge?.maneuver_name || '').trim();
+      const maneuverType = deriveManeuverType({
+        maneuverType: challenge?.maneuver_type,
+        specialization: challenge?.specialization
+      });
+      const rewardXp = Number(challenge?.reward_xp ?? 0);
+      let maneuverPayload = parseManeuverPayload(challenge?.maneuver_payload);
+      maneuverPayload = maneuverPayload ? ensureManeuverPayload(maneuverPayload) : null;
       return {
         id: challenge?.id ?? String(Math.random()),
-        title: challenge?.trick || 'Desafio sem nome',
-        description: challenge?.description || '',
+        title: maneuverName || 'Desafio sem nome',
+        description: rewardXp > 0 ? `${rewardXp} XP` : '',
         difficulty: difficultyLabel,
         badge: difficultyLabel,
         seasonName: challenge?.season_name || 'Temporada não definida',
@@ -159,6 +174,10 @@ export default function DiscoverScreen({ navigation }) {
         parkId: challenge?.park_id ?? null,
         obstacleIds,
         obstaclesCount: obstacleIds.length,
+        maneuverType: maneuverType || null,
+        maneuverName: maneuverName || null,
+        rewardXp,
+        maneuverPayload,
       };
     });
   }, [challenges]);
@@ -225,14 +244,24 @@ export default function DiscoverScreen({ navigation }) {
   }, [baseMonthlyChallenges, selectedDifficulty, selectedMonthlyPassId]);
 
   const handleChallengePress = (challenge) => {
+    if (!challenge.maneuverPayload) {
+      Alert.alert(
+        'Configuração indisponível',
+        'Este desafio ainda não possui a manobra configurada. Entre em contato com o time para finalizar o cadastro.'
+      );
+      return;
+    }
     navigation.navigate?.('Upload', {
       presetChallenge: {
-        trick: challenge.title,
+        maneuverType: challenge.maneuverType,
+        maneuverName: challenge.maneuverName,
+        maneuverPayload: challenge.maneuverPayload,
         parkId: challenge.parkId,
         obstacleId: Array.isArray(challenge.obstacleIds)
           ? challenge.obstacleIds[0]
           : challenge.obstacleIds,
         difficulty: challenge.difficulty,
+        rewardXp: challenge.rewardXp,
         monthlyPassId: challenge.monthlyPassId,
         seasonPassId: challenge.seasonPassId,
         seasonId: challenge.seasonId,
@@ -365,14 +394,14 @@ export default function DiscoverScreen({ navigation }) {
       >
         <View style={styles.searchBarWrapper}>
           <View style={styles.searchBar}>
-            <Icon name="search" size={20} color={colors.textSecondary} />
+            <MaterialIcons name="search" size={20} color={colors.textSecondary} />
             <TextInput
               style={styles.searchInput}
               placeholder="Buscar atletas, parques ou manobras"
               placeholderTextColor={colors.textSecondary}
             />
             <TouchableOpacity style={styles.filterButton}>
-              <Icon name="tune" size={22} color={colors.textPrimary} />
+              <MaterialIcons name="tune" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -464,7 +493,7 @@ export default function DiscoverScreen({ navigation }) {
             {!loadingRiders && !ridersError && riders.length === 0 ? (
               <YupCard style={styles.riderEmptyCard}>
                 <View style={styles.riderEmptyContent}>
-                  <Icon name="sentiment-neutral" size={28} color={colors.textSecondary} />
+                  <MaterialIcons name="sentiment-neutral" size={28} color={colors.textSecondary} />
                   <Text style={styles.riderEmptyTitle}>Nenhum rider recente</Text>
                   <Text style={styles.riderEmptySubtitle}>
                     Assim que novos atletas criarem conta, eles aparecerão por aqui.
@@ -545,7 +574,7 @@ export default function DiscoverScreen({ navigation }) {
                       >
                         Ver no mapa
                       </Text>
-                      <Icon name="chevron-right" size={20} color={colors.primary} />
+                      <MaterialIcons name="chevron-right" size={20} color={colors.primary} />
                     </TouchableOpacity>
                   </View>
                 </YupCard>
@@ -553,7 +582,7 @@ export default function DiscoverScreen({ navigation }) {
               {!loadingParks && parks.length === 0 && (
                 <YupCard style={styles.parkEmptyCard}>
                   <View style={styles.parkEmptyContent}>
-                    <Icon name="travel-explore" size={32} color={colors.textSecondary} />
+                    <MaterialIcons name="travel-explore" size={32} color={colors.textSecondary} />
                     <Text style={styles.parkEmptyTitle}>Nenhum parque cadastrado</Text>
                     <Text style={styles.parkEmptySubtitle}>
                       Assim que um moderador adicionar um parque, ele aparecerá aqui.
@@ -638,7 +667,7 @@ export default function DiscoverScreen({ navigation }) {
             {!loadingMonthlyPasses && !monthlyPassError && monthlyPasses.length === 0 ? (
               <YupCard style={styles.monthlyPassEmptyCard}>
                 <View style={styles.monthlyPassEmptyContent}>
-                  <Icon name="event-busy" size={28} color={colors.textSecondary} />
+                  <MaterialIcons name="event-busy" size={28} color={colors.textSecondary} />
                   <Text style={styles.monthlyPassEmptyTitle}>Nenhum monthly pass disponível</Text>
                   <Text style={styles.monthlyPassEmptySubtitle}>
                     Assim que um moderador cadastrar um monthly pass, você poderá explorá-lo por aqui.
@@ -672,7 +701,7 @@ export default function DiscoverScreen({ navigation }) {
                 {difficultyBreakdown.length === 0 ? (
                   <YupCard style={styles.difficultyEmptyCard}>
                     <View style={styles.difficultyEmptyContent}>
-                      <Icon name="emoji-events" size={28} color={colors.textSecondary} />
+                      <MaterialIcons name="emoji-events" size={28} color={colors.textSecondary} />
                       <Text style={styles.challengeEmptyTitle}>
                         Nenhum desafio cadastrado para este monthly pass.
                       </Text>
@@ -767,11 +796,11 @@ export default function DiscoverScreen({ navigation }) {
 
                         <View style={styles.challengeMetaRow}>
                           <View style={styles.challengeMetaChip}>
-                            <Icon name="event" size={14} color={colors.primary} />
+                            <MaterialIcons name="event" size={14} color={colors.primary} />
                             <Text style={styles.challengeMetaText}>{challenge.seasonName}</Text>
                           </View>
                           <View style={styles.challengeMetaChip}>
-                            <Icon name="landscape" size={14} color={colors.primary} />
+                            <MaterialIcons name="landscape" size={14} color={colors.primary} />
                             <Text style={styles.challengeMetaText}>{challenge.parkName}</Text>
                           </View>
                         </View>
@@ -788,7 +817,7 @@ export default function DiscoverScreen({ navigation }) {
                 {!loadingChallenges && !challengeError && challengesToDisplay.length === 0 ? (
                   <YupCard style={styles.challengeEmptyCard}>
                     <View style={styles.challengeEmptyContent}>
-                      <Icon name="emoji-events" size={28} color={colors.textSecondary} />
+                      <MaterialIcons name="emoji-events" size={28} color={colors.textSecondary} />
                       <Text style={styles.challengeEmptyTitle}>{challengesEmptyMessage}</Text>
                       <Text style={styles.challengeEmptySubtitle}>
                         {showFilteredChallenges

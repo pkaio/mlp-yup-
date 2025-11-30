@@ -10,13 +10,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Video } from 'expo-av';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { videoService } from '../services/videoService';
 import { useAuth } from '../context/AuthContext';
 import { colors, radii, spacing, typography } from '../theme/tokens';
+const Icon = MaterialIcons;
 
 export default function VideoPlayerScreen({ route, navigation }) {
   const {
@@ -26,7 +28,8 @@ export default function VideoPlayerScreen({ route, navigation }) {
   } = route.params;
   const { user } = useAuth();
   const videoRef = useRef(null);
-  
+  const { width, height } = useWindowDimensions();
+
   const [video, setVideo] = useState(initialVideo);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -34,6 +37,17 @@ export default function VideoPlayerScreen({ route, navigation }) {
   const [videoLoading, setVideoLoading] = useState(!initialVideo);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showCommentInput, setShowCommentInput] = useState(showComments);
+
+  // Calculate responsive video height
+  const videoHeight = Platform.OS === 'web'
+    ? Math.min(height * 0.6, width * (16/9)) // Web: max 60% of screen height or 16:9 aspect ratio
+    : Math.min(height * 0.4, 500); // Native: max 40% of screen height or 500px
+
+  const maneuverMeta = video?.score_breakdown?.xp?.maneuver || {};
+  const maneuverName = (maneuverMeta.name || video?.maneuver_name || video?.trick || video?.trick_name || '').trim();
+  const maneuverType = typeof maneuverMeta.type === 'string' && maneuverMeta.type
+    ? maneuverMeta.type.toUpperCase()
+    : null;
 
   useEffect(() => {
     if (initialVideo) {
@@ -192,13 +206,13 @@ export default function VideoPlayerScreen({ route, navigation }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <View style={styles.videoContainer}>
+        <View style={[styles.videoContainer, { height: videoHeight }]}>
           {video && (
             <Video
               ref={videoRef}
               source={{ uri: video.video_url }}
               style={styles.video}
-              resizeMode="cover"
+              resizeMode={Platform.OS === 'web' ? 'contain' : 'cover'}
               shouldPlay
               isLooping
               onLoad={() => {
@@ -233,7 +247,7 @@ export default function VideoPlayerScreen({ route, navigation }) {
             style={styles.closeButton}
             onPress={() => navigation.goBack()}
           >
-            <Icon name="close" size={24} color={colors.textPrimary} />
+            <MaterialIcons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -247,13 +261,21 @@ export default function VideoPlayerScreen({ route, navigation }) {
             </Text>
           </View>
 
-          {video?.description && (
-            <Text style={styles.description}>{video.description}</Text>
-          )}
+          {maneuverName ? (
+            <View style={styles.maneuverInfo}>
+              <MaterialIcons name="insights" size={16} color={colors.primary} />
+              <View style={styles.maneuverInfoCopy}>
+                {maneuverType ? (
+                  <Text style={styles.maneuverType}>{maneuverType}</Text>
+                ) : null}
+                <Text style={styles.maneuverName}>{maneuverName}</Text>
+              </View>
+            </View>
+          ) : null}
 
           <View style={styles.actions}>
             <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-              <Icon name="favorite-border" size={24} color={colors.textSecondary} />
+              <MaterialIcons name="favorite-border" size={24} color={colors.textSecondary} />
               <Text style={styles.actionText}>{video?.likes_count || 0}</Text>
             </TouchableOpacity>
 
@@ -261,12 +283,12 @@ export default function VideoPlayerScreen({ route, navigation }) {
               style={styles.actionButton}
               onPress={() => setShowCommentInput(!showCommentInput)}
             >
-              <Icon name="comment" size={24} color={colors.textSecondary} />
+              <MaterialIcons name="comment" size={24} color={colors.textSecondary} />
               <Text style={styles.actionText}>{video?.comments_count || 0}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionButton}>
-              <Icon name="share" size={24} color={colors.textSecondary} />
+              <MaterialIcons name="share" size={24} color={colors.textSecondary} />
               <Text style={styles.actionText}>Compartilhar</Text>
             </TouchableOpacity>
           </View>
@@ -287,7 +309,7 @@ export default function VideoPlayerScreen({ route, navigation }) {
               onPress={handleComment}
               disabled={!newComment.trim()}
             >
-              <Icon name="send" size={20} color={colors.textPrimary} />
+              <MaterialIcons name="send" size={20} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
         )}
@@ -326,7 +348,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   videoContainer: {
-    height: 320,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 800 : undefined,
+    alignSelf: 'center',
     position: 'relative',
     backgroundColor: '#000000',
   },
@@ -386,10 +410,30 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.sizes.xs,
   },
-  description: {
+  maneuverInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  maneuverInfoCopy: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
+  maneuverType: {
+    fontSize: typography.sizes.xs,
     color: colors.textSecondary,
-    fontSize: typography.sizes.sm,
-    lineHeight: typography.sizes.md,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  maneuverName: {
+    fontSize: typography.sizes.md,
+    color: colors.textPrimary,
+    lineHeight: typography.sizes.md * typography.lineHeights.relaxed,
   },
   actions: {
     flexDirection: 'row',

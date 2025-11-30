@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import YupHeader from '../components/ui/YupHeader';
 import YupCard from '../components/ui/YupCard';
@@ -15,6 +15,9 @@ import { videoService } from '../services/videoService';
 import { notificationService } from '../services/notificationService';
 import { challengeService } from '../services/challengeService';
 import { useFocusEffect } from '@react-navigation/native';
+import { useUserSophistication } from '../hooks/useUserSophistication';
+import { SimpleXPView, DetailedXPView } from '../components/profile';
+const Icon = MaterialIcons;
 
 const difficultyThemes = {
   Iniciante: {
@@ -107,6 +110,7 @@ const getInitials = (name = '', fallback = '?') => {
 
 export default function ProfileScreen({ navigation }) {
   const { user } = useAuth();
+  const sophistication = useUserSophistication();
   const [stats, setStats] = useState(null);
   const [badges, setBadges] = useState([]);
   const [userVideos, setUserVideos] = useState([]);
@@ -360,7 +364,7 @@ export default function ProfileScreen({ navigation }) {
                 )}
               </TouchableOpacity>
               <TouchableOpacity style={styles.cardIconButton} activeOpacity={0.85} onPress={handleEditProfile}>
-                <Icon name="settings" size={18} color={colors.textPrimary} />
+                <MaterialIcons name="settings" size={18} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -370,7 +374,7 @@ export default function ProfileScreen({ navigation }) {
                 <Image source={{ uri: user.profile_image_url }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarFallback}>
-                  <Icon name="person" size={42} color={colors.textSecondary} />
+                  <MaterialIcons name="person" size={42} color={colors.textSecondary} />
                 </View>
               )}
             </LinearGradient>
@@ -385,47 +389,35 @@ export default function ProfileScreen({ navigation }) {
             {user?.bio || 'Compartilhe suas sessions e evolua com a crew da Y’UP.'}
           </Text>
 
-          <View style={styles.xpInline}>
-            <View style={styles.xpInlineHeader}>
-              <View>
-                <Text style={styles.xpTitle}>Experiência</Text>
-                <Text style={styles.xpSubtitle}>
-                  {xpRemaining > 0
-                    ? `Faltam ${formatNumber(xpRemaining)} XP para o nível ${Math.min(level + 1, xpMaxLevel)}`
-                    : 'Você alcançou o nível máximo!'}
-                </Text>
-              </View>
-              <View style={styles.xpValueContainer}>
-                <Text style={styles.xpValue}>
-                  {formatNumber(xpCurrent)} / {formatNumber(xpNext)} XP
-                </Text>
-                <Text style={styles.xpValueSecondary}>
-                  Total {formatNumber(xpTotal)} / {formatNumber(xpCap)} XP
-                </Text>
-              </View>
-            </View>
-            <YupProgress
-              value={xpProgress}
-              gradientColors={['#0ea5e9', '#fb923c']}
-            />
-            <View style={styles.xpMetaRow}>
-              <View style={styles.xpMetaItem}>
-                <Text style={styles.xpMetaLabel}>Progresso global</Text>
-                <Text style={styles.xpMetaValue}>{Math.round(xpTotalPercent * 100)}%</Text>
-              </View>
-              <View style={styles.xpMetaItem}>
-                <Text style={styles.xpMetaLabel}>Nível atual</Text>
-                <Text style={styles.xpMetaValue}>{level}/{xpMaxLevel}</Text>
-              </View>
-              <View style={styles.xpMetaItem}>
-                <Text style={styles.xpMetaLabel}>Combo recente</Text>
-                <Text style={styles.xpMetaValue}>
-                  {xpLog?.[0]?.exp_awarded ? `+${formatNumber(xpLog[0].exp_awarded)} XP` : '—'}
-                </Text>
-              </View>
-            </View>
-          </View>
         </YupCard>
+
+        {/* Renderização adaptativa de XP baseada no nível de sofisticação */}
+        {sophistication.isBeginner ? (
+          <SimpleXPView
+            level={level}
+            xpCurrent={xpCurrent}
+            xpNext={xpNext}
+            xpRemaining={xpRemaining}
+            xpProgress={xpProgress}
+            xpMaxLevel={xpMaxLevel}
+            formatNumber={formatNumber}
+          />
+        ) : (
+          <DetailedXPView
+            level={level}
+            xpCurrent={xpCurrent}
+            xpNext={xpNext}
+            xpRemaining={xpRemaining}
+            xpTotal={xpTotal}
+            xpCap={xpCap}
+            xpProgress={xpProgress}
+            xpMaxLevel={xpMaxLevel}
+            xpTotalPercent={xpTotalPercent}
+            xpLog={xpLog}
+            formatNumber={formatNumber}
+            showComboHistory={sophistication.shouldShowComboHistory()}
+          />
+        )}
 
         <YupCard style={styles.leaderboardCard}>
           <View style={styles.leaderboardHeader}>
@@ -559,7 +551,7 @@ export default function ProfileScreen({ navigation }) {
                         {completion.difficulty || 'Desafio'}
                       </Text>
                       <Text style={styles.completionBadgeTitle} numberOfLines={2}>
-                        {completion.trick || 'Sem nome'}
+                        {(completion.maneuver_name || completion.trick) || 'Sem nome'}
                       </Text>
                       <Text style={styles.completionBadgeSubtitle} numberOfLines={1}>
                         {completion.monthly_pass_name || completion.season_pass_name || 'Monthly pass'}
@@ -577,11 +569,11 @@ export default function ProfileScreen({ navigation }) {
           {achievements.length > 0 ? (
             <TouchableOpacity style={styles.seasonCta} onPress={handleAchievements} activeOpacity={0.85}>
               <Text style={styles.seasonCtaText}>Ver todas as achievements</Text>
-              <Icon name="chevron-right" size={18} color={colors.primary} />
+              <MaterialIcons name="chevron-right" size={18} color={colors.primary} />
             </TouchableOpacity>
           ) : (
             <View style={styles.seasonEmpty}>
-              <Icon name="emoji-events" size={28} color={colors.primary} />
+              <MaterialIcons name="emoji-events" size={28} color={colors.primary} />
               <Text style={styles.seasonEmptyText}>
                 Conquiste badges nesta temporada para desbloquear estatísticas exclusivas.
               </Text>
@@ -598,10 +590,17 @@ export default function ProfileScreen({ navigation }) {
           {userVideos.length > 0 ? (
             <View style={styles.videoGrid}>
               {userVideos.map((video) => {
+                const maneuverMeta = video?.score_breakdown?.xp?.maneuver || {};
                 const trickLabel =
-                  [video?.trick, video?.trick_name, video?.description]
+                  [video?.maneuver_name, maneuverMeta.name, video?.trick, video?.trick_name]
                     .map((value) => (typeof value === 'string' ? value.trim() : ''))
                     .find(Boolean) || '';
+                const typeLabel = typeof maneuverMeta.type === 'string' && maneuverMeta.type
+                  ? maneuverMeta.type.toUpperCase()
+                  : '';
+                const displayLabel = trickLabel
+                  ? `${typeLabel ? `${typeLabel} • ` : ''}${trickLabel}`
+                  : '';
 
                 return (
                   <TouchableOpacity
@@ -623,20 +622,20 @@ export default function ProfileScreen({ navigation }) {
                             colors={['transparent', 'rgba(0,0,0,0.75)']}
                             style={styles.videoThumbnailOverlay}
                           />
-                          {trickLabel ? (
+                          {displayLabel ? (
                             <View style={styles.videoThumbnailTrick} pointerEvents="none">
                               <Text
                                 style={styles.videoThumbnailTrickText}
                                 numberOfLines={2}
                                 ellipsizeMode="tail"
                               >
-                                {trickLabel}
+                                {displayLabel}
                               </Text>
                             </View>
                           ) : null}
                           <View style={styles.videoThumbnailMeta}>
                             <View style={styles.videoThumbnailIcon}>
-                              <Icon name="play-arrow" size={18} color={colors.surface} />
+                              <MaterialIcons name="play-arrow" size={18} color={colors.surface} />
                             </View>
                             <Text style={styles.videoThumbnailDuration}>
                               {formatVideoDuration(video.duration)}
@@ -645,7 +644,7 @@ export default function ProfileScreen({ navigation }) {
                         </>
                       ) : (
                         <View style={styles.videoTilePlaceholder}>
-                          <Icon name="play-circle-outline" size={28} color={colors.textSecondary} />
+                          <MaterialIcons name="play-circle-outline" size={28} color={colors.textSecondary} />
                         </View>
                       )}
                     </View>
@@ -655,7 +654,7 @@ export default function ProfileScreen({ navigation }) {
             </View>
           ) : (
             <View style={styles.videoEmpty}>
-              <Icon name="movie" size={28} color={colors.textSecondary} />
+              <MaterialIcons name="movie" size={28} color={colors.textSecondary} />
               <Text style={styles.videoEmptyText}>Você ainda não publicou vídeos.</Text>
             </View>
           )}

@@ -3,10 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, ScrollView, Act
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { parkService } from '../services/parkService';
 import { videoService } from '../services/videoService';
 import { colors, radii, spacing, typography } from '../theme/tokens';
+const Icon = MaterialIcons;
 
 export default function MapScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -423,7 +424,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{selectedPark.name}</Text>
               <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
-                <Icon name="close" size={20} color={colors.textSecondary} />
+                <MaterialIcons name="close" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -436,21 +437,21 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
 
               {selectedPark.address && (
                 <View style={styles.infoRow}>
-                  <Icon name="location-on" size={18} color={colors.primary} />
+                  <MaterialIcons name="location-on" size={18} color={colors.primary} />
                   <Text style={styles.infoText}>{selectedPark.address}</Text>
                 </View>
               )}
 
               {selectedPark.phone && (
                 <View style={styles.infoRow}>
-                  <Icon name="phone" size={18} color={colors.accent} />
+                  <MaterialIcons name="phone" size={18} color={colors.accent} />
                   <Text style={styles.infoText}>{selectedPark.phone}</Text>
                 </View>
               )}
 
               <View style={styles.obstacleSection}>
                 <View style={styles.obstacleSectionHeader}>
-                  <Icon name="waves" size={18} color={colors.primary} />
+                  <MaterialIcons name="waves" size={18} color={colors.primary} />
                   <Text style={styles.obstacleSectionTitle}>Obstáculos no mapa</Text>
                 </View>
                 <Text style={styles.obstacleSectionSubtitle}>
@@ -549,7 +550,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
                 style={[styles.modalButton, styles.primaryButton]}
                 onPress={() => handleCheckin(selectedPark)}
               >
-                <Icon name="check-circle" size={20} color={colors.textPrimary} />
+                <MaterialIcons name="check-circle" size={20} color={colors.textPrimary} />
                 <Text style={styles.primaryButtonText}>Check-in</Text>
               </TouchableOpacity>
 
@@ -557,7 +558,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
                 style={[styles.modalButton, styles.secondaryButton]}
                 onPress={() => handleNavigateToPark(selectedPark)}
               >
-                <Icon name="directions" size={20} color={colors.primary} />
+                <MaterialIcons name="directions" size={20} color={colors.primary} />
                 <Text style={styles.secondaryButtonText}>Traçar Rota</Text>
               </TouchableOpacity>
             </View>
@@ -591,7 +592,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
           style={styles.nearbyCloseButton}
           onPress={() => setShowNearbyWidget(false)}
         >
-          <Icon name="close" size={18} color={colors.textSecondary} />
+          <MaterialIcons name="close" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -617,12 +618,12 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
               }
             }}
           >
-            <Icon name="refresh" size={18} color={colors.warning} />
+            <MaterialIcons name="refresh" size={18} color={colors.warning} />
             <Text style={styles.nearbyErrorText}>Tocar para tentar novamente</Text>
           </TouchableOpacity>
         ) : nearbyParks.length === 0 ? (
           <View style={styles.nearbyEmptyCard}>
-            <Icon name="travel-explore" size={20} color={colors.textSecondary} />
+            <MaterialIcons name="travel-explore" size={20} color={colors.textSecondary} />
             <Text style={styles.nearbyEmptyText}>
               Explore o mapa ou ajuste o raio para encontrar parques perto de você.
             </Text>
@@ -642,7 +643,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
                     <Image source={{ uri: park.logo_url }} style={styles.nearbyCardImage} />
                   ) : (
                     <View style={styles.nearbyCardImageFallback}>
-                      <Icon name="park" size={20} color={colors.primary} />
+                      <MaterialIcons name="park" size={20} color={colors.primary} />
                     </View>
                   )}
                   {index === 0 ? (
@@ -686,7 +687,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
         }
       }}
     >
-      <Icon name="expand-less" size={18} color={colors.textPrimary} />
+      <MaterialIcons name="expand-less" size={18} color={colors.textPrimary} />
       <Text style={styles.nearbyCollapsedText}>Parques próximos</Text>
     </TouchableOpacity>
   );
@@ -712,11 +713,11 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
               <Image source={{ uri: thumbnail }} style={styles.obstacleFeedThumbnail} />
             ) : (
               <View style={styles.obstacleFeedThumbnailFallback}>
-                <Icon name="videocam" size={22} color={colors.textSecondary} />
+                <MaterialIcons name="videocam" size={22} color={colors.textSecondary} />
               </View>
             )}
             <View style={styles.obstacleFeedThumbnailOverlay}>
-              <Icon name="play-arrow" size={18} color={colors.textPrimary} />
+              <MaterialIcons name="play-arrow" size={18} color={colors.textPrimary} />
             </View>
           </View>
           <View style={styles.obstacleFeedContent}>
@@ -738,7 +739,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
             <View style={styles.obstacleFeedMeta}>
               {item.park_name ? (
                 <View style={styles.obstacleFeedMetaItem}>
-                  <Icon name="park" size={14} color={colors.textSecondary} />
+                  <MaterialIcons name="park" size={14} color={colors.textSecondary} />
                   <Text style={styles.obstacleFeedMetaText}>{item.park_name}</Text>
                 </View>
               ) : null}
@@ -757,7 +758,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
                 </Text>
               </TouchableOpacity>
                 <View style={styles.obstacleFeedMetaItem}>
-                  <Icon name="chat-bubble-outline" size={14} color={colors.textSecondary} />
+                  <MaterialIcons name="chat-bubble-outline" size={14} color={colors.textSecondary} />
                   <Text style={styles.obstacleFeedMetaText}>{item.comments_count ?? 0}</Text>
                 </View>
                 <TouchableOpacity
@@ -772,7 +773,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
                     });
                   }}
                 >
-                  <Icon name="comment" size={16} color={colors.textSecondary} />
+                  <MaterialIcons name="comment" size={16} color={colors.textSecondary} />
                   <Text style={styles.obstacleFeedMetaActionText}>Comentar</Text>
                 </TouchableOpacity>
               </View>
@@ -794,7 +795,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
             <View style={styles.obstacleModalHeader}>
               <View style={styles.obstacleModalTitleGroup}>
                 <View style={[styles.obstacleModalIcon, { backgroundColor: difficultyColor }]}>
-                  <Icon name="waves" size={18} color={colors.textPrimary} />
+                  <MaterialIcons name="waves" size={18} color={colors.textPrimary} />
                 </View>
                 <View style={styles.obstacleModalTitleText}>
                   <Text style={styles.obstacleModalTitle}>{activeObstacle.name}</Text>
@@ -804,7 +805,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
                 </View>
               </View>
               <TouchableOpacity style={styles.obstacleModalClose} onPress={handleCloseObstacleModal}>
-                <Icon name="close" size={20} color={colors.textSecondary} />
+                <MaterialIcons name="close" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -823,7 +824,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
                     </View>
                   ) : obstacleVideosError ? (
                     <View style={styles.obstacleFeedEmpty}>
-                      <Icon name="error-outline" size={22} color={colors.warning} />
+                      <MaterialIcons name="error-outline" size={22} color={colors.warning} />
                       <Text style={styles.obstacleFeedEmptyText}>{obstacleVideosError}</Text>
                       <TouchableOpacity
                         style={styles.obstacleFeedRetry}
@@ -834,7 +835,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
                     </View>
                   ) : (
                     <View style={styles.obstacleFeedEmpty}>
-                      <Icon name="movie" size={22} color={colors.textSecondary} />
+                      <MaterialIcons name="movie" size={22} color={colors.textSecondary} />
                       <Text style={styles.obstacleFeedEmptyText}>
                         Nenhum vídeo com este obstáculo ainda. Seja o primeiro!
                       </Text>
@@ -885,7 +886,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
               onPress={() => handleParkPress(park)}
             >
               <View style={styles.markerContainer}>
-                <Icon name="place" size={30} color={colors.primary} />
+                <MaterialIcons name="place" size={30} color={colors.primary} />
               </View>
               <Callout>
                 <View style={styles.calloutContainer}>
@@ -927,7 +928,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
                   onPress={() => handleObstaclePress(obstacle)}
                 >
                   <View style={[styles.obstacleMarker, { backgroundColor: obstacleColor }]}>
-                    <Icon name="waves" size={18} color={colors.textPrimary} />
+                    <MaterialIcons name="waves" size={18} color={colors.textPrimary} />
                   </View>
                 </Marker>
               );
@@ -941,7 +942,7 @@ const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
             <Text style={styles.topBarSubtitle}>Explore os parques ativos ao seu redor</Text>
           </View>
           <TouchableOpacity style={styles.locationButton} onPress={getCurrentLocation}>
-            <Icon name="my-location" size={20} color={colors.primary} />
+            <MaterialIcons name="my-location" size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </View>

@@ -1,19 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
-  Dimensions,
   ImageBackground,
-  Keyboard,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -24,9 +23,14 @@ import YupBadge from '../components/ui/YupBadge';
 import YupButton from '../components/ui/YupButton';
 import YupCard from '../components/ui/YupCard';
 import YupSectionHeader from '../components/ui/YupSectionHeader';
+import YupInput from '../components/ui/YupInput';
 import { parkService } from '../services/parkService';
-import trickService from '../services/trickService';
 import uploadService from '../services/uploadService';
+import { videoService } from '../services/videoService';
+import { ensureManeuverPayload } from '../utils/maneuver';
+import api from '../services/api';
+
+const Icon = MaterialIcons;
 
 const previewPlaceholder = require('../../assets/splash.png');
 
@@ -56,1637 +60,31 @@ const UPLOAD_STEPS = [
   { id: 3, label: 'Edição' },
 ];
 
-const RAIL_APPROACH_OPTIONS = [
-  { id: 'HS', label: 'HS (HeelSide)' },
-  { id: 'TS', label: 'TS (ToeSide)' },
+
+const MANEUVER_TYPES = [
+  { id: 'rail', label: 'Rail' },
+  { id: 'kicker', label: 'Kicker' },
+  { id: 'air', label: 'Air' },
+  { id: 'surface', label: 'Surface' },
 ];
 
-const RAIL_TAKEOFF_OPTIONS = [
-  { id: 'ollie', label: 'Ollie' },
-  { id: 'transfer', label: 'Transfer' },
-  { id: 'gap', label: 'Gap' },
-  { id: 'from_water', label: 'From Water' },
+const COMPONENT_DIVISIONS = [
+  { id: 'approach', label: 'Approach / Edge' },
+  { id: 'entry', label: 'Entrada' },
+  { id: 'spins', label: 'Rotação' },
+  { id: 'grabs', label: 'Grab' },
+  { id: 'base_moves', label: 'Base Move' },
 ];
 
-const RAIL_ROTATION_OPTIONS = [
-  { id: 0, label: '0°' },
-  { id: 90, label: '90°' },
-  { id: 180, label: '180°' },
-  { id: 270, label: '270°' },
-  { id: 360, label: '360°' },
-  { id: 450, label: '450°' },
-  { id: 540, label: '540°' },
-];
-
-const RAIL_ROTATION_IN_OPTIONS = RAIL_ROTATION_OPTIONS.filter((option) =>
-  [0, 180, 270, 450, 540].includes(option.id)
-);
-
-const RAIL_ROTATION_OUT_OPTIONS = RAIL_ROTATION_OPTIONS.filter((option) =>
-  [0, 90, 180, 270, 450, 540].includes(option.id)
-);
-
-const RAIL_SWITCHUP_ROTATION_OPTIONS = RAIL_ROTATION_OPTIONS.filter((option) =>
-  [0, 90, 180, 270, 360].includes(option.id)
-);
-
-const RAIL_DIRECTION_OPTIONS = [
-  { id: 'FS', label: 'Frontside' },
-  { id: 'BS', label: 'Backside' },
-];
-
-const RAIL_TRICK_OPTIONS = [
-  { id: '50-50', label: '50-50' },
-  { id: 'boardslide', label: 'Boardslide' },
-  { id: 'lipslide', label: 'Lipslide' },
-  { id: 'nosepress', label: 'Nosepress' },
-  { id: 'tailpress', label: 'Tailpress' },
-];
-
-const RAIL_STANCE_OPTIONS = [
-  { id: 'regular', label: 'Regular' },
-  { id: 'switch', label: 'Switch' },
-];
-
-const RAIL_BALANCE_OPTIONS = [
-  { id: 'centered', label: 'Centralizado' },
-  { id: 'nose-heavy', label: 'Peso no nose' },
-  { id: 'tail-heavy', label: 'Peso no tail' },
-];
-
-const RAIL_MODIFIER_OPTIONS = [
-  { id: 'locked', label: 'Locked' },
-  { id: 'tweaked', label: 'Tweaked' },
-  { id: 'press', label: 'Press' },
-  { id: 'pretzel', label: 'Pretzel' },
-  { id: 'shifty', label: 'Shifty' },
-  { id: 'grab', label: 'Grab' },
-];
-
-const RAIL_SWITCHUP_TYPE_OPTIONS = [
-  { id: 'hop', label: 'Hop' },
-  { id: 'nollie', label: 'Nollie' },
-  { id: 'ollie', label: 'Ollie' },
-  { id: 'body_varial', label: 'Body Varial' },
-];
-
-const RAIL_EXIT_LANDING_OPTIONS = [
-  { id: 'regular', label: 'Regular' },
-  { id: 'switch', label: 'Switch' },
-  { id: 'revert', label: 'Revert' },
-];
-
-const RAIL_EXIT_EXTRAS = [
-  { id: 'to_blind', label: 'To Blind' },
-  { id: 'shuv', label: 'Shuv' },
-];
-
-const KICKER_APPROACH_OPTIONS = [
-  { id: 'HS', label: 'HS (HeelSide)' },
-  { id: 'TS', label: 'TS (ToeSide)' },
-];
-
-const KICKER_STANCE_OPTIONS = [
-  { id: 'regular', label: 'Regular' },
-  { id: 'switch', label: 'Switch' },
-];
-
-const KICKER_POP_OPTIONS = [
-  { id: 'edge', label: 'Edge' },
-  { id: 'ollie', label: 'Ollie' },
-  { id: 'transfer', label: 'Transfer' },
-  { id: 'flat_pop', label: 'Flat Pop' },
-];
-
-const KICKER_AXIS_OPTIONS = [
-  { id: 'on-axis', label: 'On-axis' },
-  { id: 'off-axis', label: 'Off-axis' },
-  { id: 'inverted', label: 'Inverted' },
-];
-
-const KICKER_ROTATION_DIRECTION_OPTIONS = [
-  { id: 'FS', label: 'Frontside' },
-  { id: 'BS', label: 'Backside' },
-];
-
-const KICKER_ROTATION_DEGREES_OPTIONS = [
-  { id: 0, label: '0°' },
-  { id: 180, label: '180°' },
-  { id: 360, label: '360°' },
-  { id: 540, label: '540°' },
-  { id: 720, label: '720°' },
-  { id: 900, label: '900°' },
-  { id: 1080, label: '1080°' },
-  { id: 1260, label: '1260°' },
-  { id: 1440, label: '1440°' },
-];
-
-const KICKER_FLIP_TYPES = [
-  { id: null, label: 'Sem flip' },
-  { id: 'kickflip', label: 'Kickflip' },
-  { id: 'heelflip', label: 'Heelflip' },
-  { id: 'frontflip', label: 'Frontflip' },
-  { id: 'backflip', label: 'Backflip' },
-  { id: 'shuvit', label: 'Shuvit' },
-];
-
-const KICKER_GRAB_OPTIONS = [
-  { id: null, label: 'Sem grab' },
-  { id: 'mute', label: 'Mute' },
-  { id: 'indy', label: 'Indy' },
-  { id: 'stalefish', label: 'Stalefish' },
-  { id: 'melon', label: 'Melon' },
-  { id: 'tail', label: 'Tail' },
-  { id: 'nose', label: 'Nose' },
-];
-
-const KICKER_MODIFIER_OPTIONS = [
-  { id: 'handlepass', label: 'Handlepass' },
-  { id: 'blind', label: 'Blind' },
-  { id: 'wrapped', label: 'Wrapped' },
-  { id: 'late', label: 'Late' },
-  { id: 'rewind', label: 'Rewind' },
-  { id: 'double', label: 'Double' },
-  { id: 'switch', label: 'Switch' },
-];
-
-const KICKER_LANDING_STANCE_OPTIONS = [
-  { id: 'regular', label: 'Regular' },
-  { id: 'switch', label: 'Switch' },
-  { id: 'fakie', label: 'Fakie' },
-];
-
-const KICKER_LANDING_STYLE_OPTIONS = [
-  { id: 'normal', label: 'Normal' },
-  { id: 'to_blind', label: 'To blind' },
-  { id: 'revert', label: 'Revert' },
-  { id: 'to_fakie', label: 'To fakie' },
-  { id: 'late', label: 'Late' },
-];
-
-const AIR_APPROACH_OPTIONS = [
-  { id: 'HS', label: 'HS (HeelSide)' },
-  { id: 'TS', label: 'TS (ToeSide)' },
-];
-
-const AIR_STANCE_OPTIONS = [
-  { id: 'regular', label: 'Regular' },
-  { id: 'switch', label: 'Switch' },
-];
-
-const AIR_EDGE_LOAD_OPTIONS = [
-  { id: 'light', label: 'Light load' },
-  { id: 'medium', label: 'Medium load' },
-  { id: 'heavy', label: 'Heavy load' },
-];
-
-const AIR_RELEASE_OPTIONS = [
-  { id: 'progressive', label: 'Progressive' },
-  { id: 'trip', label: 'Trip' },
-  { id: 'ollie', label: 'Ollie' },
-  { id: 'ole_wrapped', label: 'Ole / Wrapped' },
-];
-
-const AIR_AXIS_OPTIONS = [
-  { id: 'on-axis', label: 'On-axis' },
-  { id: 'off-axis', label: 'Off-axis' },
-  { id: 'inverted', label: 'Inverted' },
-];
-
-const AIR_DIRECTION_OPTIONS = [
-  { id: 'FS', label: 'Frontside' },
-  { id: 'BS', label: 'Backside' },
-];
-
-const AIR_DEGREES_OPTIONS = [
-  { id: 0, label: '0°' },
-  { id: 180, label: '180°' },
-  { id: 360, label: '360°' },
-  { id: 540, label: '540°' },
-  { id: 720, label: '720°' },
-  { id: 900, label: '900°' },
-  { id: 1080, label: '1080°' },
-  { id: 1260, label: '1260°' },
-  { id: 1440, label: '1440°' },
-];
-
-const AIR_FLIP_OPTIONS = [
-  { id: null, label: 'Sem flip' },
-  { id: 'Raley', label: 'Raley' },
-  { id: 'S-Bend', label: 'S-Bend' },
-  { id: 'Krypt', label: 'Krypt' },
-  { id: 'Backroll', label: 'Backroll' },
-  { id: 'Frontroll', label: 'Frontroll' },
-  { id: 'Tantrum', label: 'Tantrum' },
-  { id: 'KGB', label: 'KGB' },
-  { id: 'KGB 5', label: 'KGB 5' },
-  { id: 'Pete Rose', label: 'Pete Rose' },
-  { id: 'Slim Chance', label: 'Slim Chance' },
-  { id: 'Heart Attack', label: 'Heart Attack' },
-  { id: 'Crow Mobe', label: 'Crow Mobe' },
-  { id: 'Moby Dick', label: 'Moby Dick' },
-  { id: 'Blind Judge', label: 'Blind Judge' },
-];
-
-const AIR_MODIFIER_OPTIONS = [
-  { id: 'handlepass', label: 'Handlepass' },
-  { id: 'wrapped', label: 'Wrapped' },
-  { id: 'blind', label: 'Blind' },
-  { id: 'late', label: 'Late' },
-  { id: 'double', label: 'Double' },
-  { id: 'rewind', label: 'Rewind' },
-];
-
-const AIR_LANDING_STANCE_OPTIONS = [
-  { id: 'regular', label: 'Regular' },
-  { id: 'switch', label: 'Switch' },
-  { id: 'fakie', label: 'Fakie' },
-];
-
-const AIR_LANDING_STYLE_OPTIONS = [
-  { id: 'normal', label: 'Normal' },
-  { id: 'to_blind', label: 'To blind' },
-  { id: 'revert', label: 'Revert' },
-  { id: 'to_fakie', label: 'To fakie' },
-  { id: 'late', label: 'Late' },
-];
-
-const AIR_EDGE_LOAD_BONUS = {
-  light: 0,
-  medium: 4,
-  heavy: 8,
-};
-
-const AIR_FLIP_BONUS = {
-  null: 0,
-  Raley: 25,
-  'S-Bend': 30,
-  Krypt: 30,
-  Backroll: 30,
-  Frontroll: 30,
-  Tantrum: 30,
-  KGB: 40,
-  'KGB 5': 40,
-  'Pete Rose': 40,
-  'Slim Chance': 40,
-  'Crow Mobe': 40,
-  'Heart Attack': 40,
-  'Moby Dick': 40,
-  'Blind Judge': 40,
-};
-
-const AIR_MODIFIER_BONUS = {
-  handlepass: 20,
-  blind: 15,
-  wrapped: 10,
-  late: 8,
-  double: 12,
-  rewind: 8,
-};
-
-const AIR_LANDING_STYLE_BONUS = {
-  normal: 0,
-  to_blind: 15,
-  revert: 10,
-  to_fakie: 10,
-  late: 8,
-};
-
-const AIR_FLIP_AXIS_EXCEPTIONS = new Set(['Raley', 'S-Bend', 'Blind Judge', 'Heart Attack']);
-
-const SURFACE_APPROACH_OPTIONS = [
-  { id: 'HS', label: 'HS (HeelSide)' },
-  { id: 'TS', label: 'TS (ToeSide)' },
-];
-
-const SURFACE_STANCE_OPTIONS = [
-  { id: 'regular', label: 'Regular' },
-  { id: 'switch', label: 'Switch' },
-];
-
-const SURFACE_SPEED_OPTIONS = [
-  { id: null, label: 'Velocidade padrão' },
-  { id: 'low', label: 'Low' },
-  { id: 'mid', label: 'Mid' },
-  { id: 'high', label: 'High' },
-];
-
-const SURFACE_MOVE_OPTIONS = [
-  { id: 'Surface 180', label: 'Surface 180' },
-  { id: 'Surface 360', label: 'Surface 360' },
-  { id: 'Surface 540', label: 'Surface 540' },
-  { id: 'Butter 180', label: 'Butter 180' },
-  { id: 'Butter 360', label: 'Butter 360' },
-  { id: 'Nosepress', label: 'Nosepress' },
-  { id: 'Tailpress', label: 'Tailpress' },
-  { id: 'Powerslide', label: 'Powerslide' },
-  { id: 'Shuvit', label: 'Shuvit' },
-];
-
-const SURFACE_DEGREES_OPTIONS = [
-  { id: 0, label: '0°' },
-  { id: 180, label: '180°' },
-  { id: 360, label: '360°' },
-  { id: 540, label: '540°' },
-];
-
-const SURFACE_DIRECTION_OPTIONS = [
-  { id: null, label: 'Sem direção' },
-  { id: 'FS', label: 'Frontside' },
-  { id: 'BS', label: 'Backside' },
-];
-
-const SURFACE_MODIFIER_OPTIONS = [
-  { id: 'handlepass', label: 'Handlepass' },
-  { id: 'blind', label: 'Blind' },
-  { id: 'revert', label: 'Revert' },
-  { id: 'rewind', label: 'Rewind' },
-  { id: 'butter', label: 'Butter' },
-];
-
-const SURFACE_EXIT_STANCE_OPTIONS = [
-  { id: 'regular', label: 'Regular' },
-  { id: 'switch', label: 'Switch' },
-];
-
-const SURFACE_EXIT_STYLE_OPTIONS = [
-  { id: 'normal', label: 'Normal' },
-  { id: 'revert', label: 'Revert' },
-  { id: 'to_blind', label: 'To blind' },
-];
-
-const SURFACE_MOVE_DEGREE_MAP = {
-  'Surface 180': [180],
-  'Surface 360': [360],
-  'Surface 540': [540],
-  'Butter 180': [180],
-  'Butter 360': [360],
-  Nosepress: [0],
-  Tailpress: [0],
-  Powerslide: [0, 180],
-  Shuvit: [180],
-};
-
-const SURFACE_MOVE_BONUS = {
-  'Surface 180': 8,
-  'Surface 360': 16,
-  'Surface 540': 24,
-  'Butter 180': 10,
-  'Butter 360': 10,
-  Nosepress: 10,
-  Tailpress: 10,
-  Powerslide: 8,
-  Shuvit: 16,
-};
-
-const SURFACE_MODIFIER_BONUS = {
-  handlepass: 12,
-  blind: 10,
-  revert: 8,
-  rewind: 6,
-  butter: 6,
-};
-
-const SURFACE_EXIT_STYLE_BONUS = {
-  normal: 0,
-  revert: 6,
-  to_blind: 10,
-};
-
-const createDefaultRailEntry = () => ({
-  approach: 'HS',
-  takeoff: 'ollie',
-  rotation_in: 0,
-  direction_in: 'FS',
-});
-
-const createDefaultRailSegment = () => ({
-  trick: 'boardslide',
-  stance: 'regular',
-  balance: 'centered',
-  modifiers: [],
-  switchUp: null,
-});
-
-const createDefaultRailExit = () => ({
-  rotation_out: 0,
-  direction_out: 'FS',
-  landing: 'regular',
-  extras: [],
-});
-
-const defaultSwitchUp = {
-  type: 'hop',
-  rotation: 0,
-  direction: 'FS',
-};
-
-const createDefaultKickerEntry = () => ({
-  approach: 'HS',
-  stance: 'regular',
-  pop: 'ollie',
-});
-
-const createDefaultKickerBody = () => ({
-  rotation_axis: 'on-axis',
-  rotation_direction: 'FS',
-  rotation_degrees: 360,
-  flip_type: null,
-  grab: null,
-  modifiers: [],
-});
-
-const createDefaultKickerExit = () => ({
-  landing_stance: 'regular',
-  landing_style: 'normal',
-});
-
-const createDefaultAirEntry = () => ({
-  approach: 'HS',
-  stance: 'regular',
-  edge_load: 'medium',
-  release: 'progressive',
-});
-
-const createDefaultAirBody = () => ({
-  axis: 'on-axis',
-  direction: 'FS',
-  degrees: 0,
-  flip: null,
-  modifiers: [],
-});
-
-const createDefaultAirExit = () => ({
-  landing_stance: 'regular',
-  landing_style: 'normal',
-});
-
-const createDefaultSurfaceEntry = () => ({
-  approach: 'HS',
-  stance: 'regular',
-  speed: null,
-});
-
-const createDefaultSurfaceBody = () => ({
-  move: 'Surface 180',
-  degrees: 180,
-  direction: null,
-  modifiers: [],
-});
-
-const createDefaultSurfaceExit = () => ({
-  end_stance: 'regular',
-  end_style: 'normal',
-});
-
-const findLabel = (options, id) => options.find((option) => option.id === id)?.label || id;
-
-const formatRotationDirection = (direction, rotation) => {
-  if (!rotation || rotation === 0) {
-    return direction;
-  }
-  return `${direction}${rotation}`;
-};
-
-const slugify = (value) => {
-  if (value == null) return '';
-  return String(value)
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-};
-
-const buildSlug = (prefix, ...parts) => {
-  const cleaned = parts.map(slugify).filter(Boolean);
-  return [slugify(prefix), ...cleaned].filter(Boolean).join('-');
-};
-
-const ensureArray = (value) => (Array.isArray(value) ? value.filter(Boolean) : []);
-
-const buildRailPreview = (entry, segments, exit) => {
-  if (!entry || !segments?.length || !exit) {
-    return 'Configure a linha RAIL para visualizar a prévia.';
-  }
-
-  const entryRotation = formatRotationDirection(entry.direction_in, entry.rotation_in);
-  const entryText = `${entry.approach} ${findLabel(RAIL_TAKEOFF_OPTIONS, entry.takeoff)} ${entryRotation} in`;
-
-  let preview = entryText;
-  segments.forEach((segment, index) => {
-    const parts = [findLabel(RAIL_TRICK_OPTIONS, segment.trick)];
-    if (segment.stance === 'switch') {
-      parts.push('[switch]');
-    }
-    if (segment.balance && segment.balance !== 'centered') {
-      parts.push(`(${findLabel(RAIL_BALANCE_OPTIONS, segment.balance)})`);
-    }
-    if (segment.modifiers?.length) {
-      parts.push(`{${segment.modifiers.map((modifier) => findLabel(RAIL_MODIFIER_OPTIONS, modifier)).join(' + ')}}`);
-    }
-
-    const segmentLabel = parts.join(' ');
-    if (index === 0) {
-      preview += `, ${segmentLabel}`;
-      return;
-    }
-
-    const previous = segments[index - 1];
-    const switchUp = previous.switchUp
-      ? `${findLabel(RAIL_SWITCHUP_TYPE_OPTIONS, previous.switchUp.type)} ${formatRotationDirection(
-          previous.switchUp.direction,
-          previous.switchUp.rotation
-        )}`
-      : '';
-    preview += switchUp ? ` → (${switchUp}) ${segmentLabel}` : `, ${segmentLabel}`;
-  });
-
-  const exitRotation = formatRotationDirection(exit.direction_out, exit.rotation_out);
-  const landingText = exit.landing !== 'regular' ? ` ${findLabel(RAIL_EXIT_LANDING_OPTIONS, exit.landing)}` : '';
-  const extrasText = exit.extras?.length
-    ? ` +${exit.extras.map((extra) => findLabel(RAIL_EXIT_EXTRAS, extra)).join(' + ')}`
-    : '';
-
-  preview += `, ${exitRotation} out${landingText}${extrasText}`;
-  return preview;
-};
-
-const validateRailFlow = (entry, segments) => {
-  const messages = [];
-  if (!segments?.length) {
-    messages.push({ type: 'error', text: 'Adicione ao menos um segmento para compor a linha.' });
-    return messages;
-  }
-
-  const first = segments[0];
-  if (entry.rotation_in >= 270 && entry.direction_in === 'FS') {
-    const allowed = ['boardslide', 'lipslide'];
-    if (!allowed.includes(first.trick)) {
-      messages.push({
-        type: 'warning',
-        text: 'FS270 in normalmente conecta em boardslide/backlip. Ajuste o primeiro segmento.',
-      });
-    }
-  }
-
-  if (entry.direction_in === 'BS' && entry.rotation_in >= 180) {
-    const allowed = ['50-50', 'nosepress', 'tailpress'];
-    if (!allowed.includes(first.trick)) {
-      messages.push({
-        type: 'warning',
-        text: 'Backside in com muita rotação pede locks estáveis (50-50, nose/tail press).',
-      });
-    }
-  }
-
-  segments.forEach((segment, index) => {
-    if (index < segments.length - 1 && !segment.switchUp) {
-      messages.push({
-        type: 'error',
-        text: `Defina o switch-up entre os segmentos ${index + 1} e ${index + 2}.`,
-      });
-    }
-  });
-
-  return messages;
-};
-
-const calculateRailXp = (entry, segments, exit, obstacle = null) => {
-  const baseObstacle =
-    Number(obstacle?.exp_base ?? obstacle?.base_xp ?? obstacle?.xp ?? 25) || 25;
-
-  const approachScore = entry.approach === 'TS' ? 12 : 10;
-  const takeoffScore =
-    {
-      ollie: 12,
-      transfer: 14,
-      gap: 16,
-      from_water: 10,
-    }[entry.takeoff] ?? 10;
-  const rotationScore =
-    {
-      0: 0,
-      180: 8,
-      270: 12,
-      450: 18,
-      540: 22,
-    }[entry.rotation_in] ?? 0;
-  const directionScore = entry.direction_in === 'BS' ? 8 : 6;
-  const entryScore = approachScore + takeoffScore + rotationScore + directionScore;
-
-  let segmentsScore = 0;
-  let switchUpsScore = 0;
-
-  segments.forEach((segment, index) => {
-    const segmentBase =
-      {
-        '50-50': 14,
-        boardslide: 16,
-        lipslide: 18,
-        nosepress: 17,
-        tailpress: 17,
-      }[segment.trick] ?? 12;
-    const stanceScore = segment.stance === 'switch' ? 8 : 0;
-    const balanceScore =
-      {
-        centered: 0,
-        'nose-heavy': 5,
-        'tail-heavy': 5,
-      }[segment.balance] ?? 0;
-    const modifiersScore = (segment.modifiers?.length ?? 0) * 4;
-    segmentsScore += segmentBase + stanceScore + balanceScore + modifiersScore;
-
-    if (segment.switchUp && index < segments.length - 1) {
-      const typeScore =
-        {
-          hop: 8,
-          nollie: 10,
-          ollie: 10,
-          body_varial: 12,
-        }[segment.switchUp.type] ?? 6;
-      const rotationSwitchScore =
-        {
-          0: 0,
-          90: 4,
-          180: 8,
-          270: 12,
-          360: 16,
-        }[segment.switchUp.rotation] ?? 0;
-      const directionSwitchScore = segment.switchUp.direction === 'BS' ? 6 : 4;
-      switchUpsScore += typeScore + rotationSwitchScore + directionSwitchScore;
-    }
-  });
-
-  const exitRotationScore =
-    {
-      0: 0,
-      90: 6,
-      180: 10,
-      270: 14,
-      450: 18,
-      540: 22,
-    }[exit.rotation_out] ?? 0;
-  const exitDirectionScore = exit.direction_out === 'BS' ? 6 : 5;
-  const landingScore =
-    {
-      regular: 0,
-      switch: 8,
-      revert: 6,
-    }[exit.landing] ?? 0;
-  const extrasScore = (exit.extras?.length ?? 0) * 6;
-  const exitScore = exitRotationScore + exitDirectionScore + landingScore + extrasScore;
-
-  const baseTotal = baseObstacle + entryScore + segmentsScore + switchUpsScore + exitScore;
-
-  let synergyFactor = 0;
-  if (segments.length > 1) synergyFactor += 0.08;
-  if (entry.rotation_in >= 270 && exit.rotation_out >= 180) synergyFactor += 0.06;
-  if (segments.some((segment) => segment.modifiers?.includes('pretzel'))) synergyFactor += 0.04;
-  if (segments.every((segment) => segment.stance === segments[0].stance)) synergyFactor += 0.03;
-  if (exit.landing === 'switch') synergyFactor += 0.02;
-  synergyFactor = Math.min(0.25, synergyFactor);
-  const synergyBonus = Math.round(baseTotal * synergyFactor);
-
-  return {
-    baseObstacle,
-    entry: entryScore,
-    segments: segmentsScore,
-    switchUps: switchUpsScore,
-    exit: exitScore,
-    synergyBonus,
-    synergyPercent: Math.round(synergyFactor * 100),
-    total: baseTotal + synergyBonus,
-  };
-};
-
-const buildKickerPreview = (entry, body, exit) => {
-  if (!entry || !body || !exit) {
-    return 'Configure a manobra no kicker para visualizar a prévia.';
-  }
-
-  const baseParts = [
-    entry.approach,
-    entry.stance === 'switch' ? 'switch' : null,
-    body.rotation_degrees ? `${body.rotation_direction}${body.rotation_degrees}` : body.rotation_direction,
-  ];
-
-  if (body.flip_type) {
-    baseParts.push(findLabel(KICKER_FLIP_TYPES, body.flip_type));
-  }
-
-  if (body.grab) {
-    baseParts.push(`${findLabel(KICKER_GRAB_OPTIONS, body.grab)} grab`);
-  }
-
-  if (body.rotation_axis !== 'on-axis') {
-    baseParts.push(`(${findLabel(KICKER_AXIS_OPTIONS, body.rotation_axis)})`);
-  }
-
-  const modifiers = ensureArray(body.modifiers);
-  const modifierText = modifiers.length
-    ? ` (${modifiers.map((modifier) => findLabel(KICKER_MODIFIER_OPTIONS, modifier)).join(' • ')})`
-    : '';
-
-  const landingParts = [];
-  if (exit.landing_style !== 'normal') {
-    landingParts.push(findLabel(KICKER_LANDING_STYLE_OPTIONS, exit.landing_style));
-  }
-  if (exit.landing_stance !== 'regular') {
-    landingParts.push(findLabel(KICKER_LANDING_STANCE_OPTIONS, exit.landing_stance));
-  }
-
-  const landingText = landingParts.length ? `, ${landingParts.join(' ')}` : '';
-  return `${baseParts.filter(Boolean).join(' ')}${modifierText}${landingText}`.trim();
-};
-
-const validateKickerCombo = (entry, body, exit) => {
-  const messages = [];
-  const modifiers = ensureArray(body?.modifiers);
-  const degrees = Number(body?.rotation_degrees ?? 0);
-
-  if (degrees > 0 && !body?.rotation_direction) {
-    messages.push({ type: 'error', text: 'Defina a direção (FS ou BS) quando houver rotação.' });
-  }
-
-  if (
-    exit?.landing_style === 'to_blind' &&
-    !modifiers.includes('handlepass') &&
-    !modifiers.includes('wrapped')
-  ) {
-    messages.push({
-      type: 'error',
-      text: 'Landing to blind exige handlepass ou wrapped.',
-    });
-  }
-
-  if (modifiers.includes('double') && body?.rotation_axis !== 'inverted' && degrees < 540) {
-    messages.push({
-      type: 'error',
-      text: 'Double precisa de invertido ou spin 540°+ para fechar seguro.',
-    });
-  }
-
-  if (body?.flip_type && body.rotation_axis !== 'inverted' && !['Blind Judge', 'Raley'].includes(body.flip_type)) {
-    messages.push({
-      type: 'warning',
-      text: 'Considere eixo inverted para este flip — exceções como Blind Judge são toleradas.',
-    });
-  }
-
-  return messages;
-};
-
-const calculateKickerXp = (entry, body, exit) => {
-  const modifiers = ensureArray(body?.modifiers);
-  const baseAir = 60;
-  const entryBonus =
-    (entry?.stance === 'switch' ? 8 : 0) +
-    (entry?.approach === 'TS' ? 2 : 0) +
-    ({
-      edge: 10,
-      ollie: 12,
-      transfer: 16,
-      flat_pop: 14,
-    }[entry?.pop] ?? 10);
-
-  const degrees = Number(body?.rotation_degrees ?? 0);
-  const spinBonus = Math.max(0, (degrees / 180) * 8);
-  const flipBonus =
-    {
-      null: 0,
-      Raley: 25,
-      'S-Bend': 30,
-      Krypt: 30,
-      Backroll: 30,
-      Frontroll: 30,
-      Tantrum: 30,
-      KGB: 40,
-      'KGB 5': 40,
-      'Pete Rose': 40,
-      'Slim Chance': 40,
-      'Heart Attack': 40,
-      'Crow Mobe': 40,
-      'Moby Dick': 40,
-      'Blind Judge': 40,
-    }[body?.flip_type ?? 'null'] ?? 0;
-  const grabBonus =
-    {
-      null: 0,
-      mute: 12,
-      indy: 12,
-      stalefish: 14,
-      melon: 14,
-      tail: 10,
-      nose: 10,
-    }[body?.grab ?? 'null'] ?? 0;
-
-  const modifiersBonus = modifiers.reduce(
-    (total, modifier) =>
-      total +
-      ({
-        handlepass: 20,
-        blind: 15,
-        wrapped: 10,
-        late: 8,
-        double: 12,
-        rewind: 8,
-        switch: 6,
-      }[modifier] ?? 6),
-    0
-  );
-
-  const landingBonus =
-    (exit?.landing_stance && exit.landing_stance !== 'regular' ? 10 : 0) +
-    ({
-      normal: 0,
-      to_blind: 15,
-      revert: 10,
-      to_fakie: 12,
-      late: 8,
-    }[exit?.landing_style] ?? 0);
-
-  const baseTotal = baseAir + entryBonus + spinBonus + flipBonus + grabBonus + modifiersBonus + landingBonus;
-
-  const synergyFlags = [
-    Boolean(body?.flip_type),
-    degrees >= 540,
-    modifiers.includes('handlepass'),
-    modifiers.includes('blind'),
-    modifiers.includes('wrapped') || entry?.pop === 'transfer',
-  ];
-
-  const synergyFactor = Math.min(synergyFlags.filter(Boolean).length * 0.05, 0.25);
-  const synergyBonus = Math.round(baseTotal * synergyFactor);
-  const total = Math.round(baseTotal + synergyBonus);
-
-  const progress = Math.min(total / 540, 1);
-  let level = 'Iniciante';
-  if (total >= 320) level = 'Avançado';
-  else if (total >= 200) level = 'Intermediário';
-
-  return {
-    entry: Math.round(entryBonus),
-    spin: Math.round(spinBonus),
-    flip: flipBonus,
-    grab: grabBonus,
-    modifiers: modifiersBonus,
-    landing: landingBonus,
-    synergyBonus,
-    synergyPercent: Math.round(synergyFactor * 100),
-    total,
-    progress,
-    level,
-  };
-};
-
-const renderAir = (entry, body, exit) => {
-  if (!entry || !body || !exit) return 'Configure a manobra no air trick para visualizar a prévia.';
-
-  const modifiers = ensureArray(body.modifiers);
-  const baseParts = [
-    entry.approach,
-    entry.stance === 'switch' ? 'switch' : null,
-    body.degrees ? `${body.direction}${body.degrees}` : body.direction,
-  ];
-
-  if (body.flip) baseParts.push(body.flip);
-  if (body.axis !== 'on-axis') baseParts.push(`(${findLabel(AIR_AXIS_OPTIONS, body.axis)})`);
-
-  const modifierText = modifiers.length
-    ? ` (${modifiers.map((modifier) => findLabel(AIR_MODIFIER_OPTIONS, modifier)).join(' • ')})`
-    : '';
-
-  const landingParts = [];
-  if (exit.landing_style !== 'normal') landingParts.push(findLabel(AIR_LANDING_STYLE_OPTIONS, exit.landing_style));
-  if (exit.landing_stance !== 'regular') landingParts.push(findLabel(AIR_LANDING_STANCE_OPTIONS, exit.landing_stance));
-  const landingText = landingParts.length ? `, ${landingParts.join(' ')}` : '';
-
-  return `${baseParts.filter(Boolean).join(' ')}${modifierText}${landingText}`.trim();
-};
-
-const validateAir = (entry, body, exit) => {
-  const messages = [];
-  const modifiers = ensureArray(body?.modifiers);
-  const degrees = Number(body?.degrees ?? 0);
-
-  if (degrees > 0 && !body?.direction) {
-    messages.push({ type: 'error', text: 'Defina a direção (FS ou BS) quando houver rotação.' });
-  }
-
-  if (
-    exit?.landing_style === 'to_blind' &&
-    !modifiers.includes('handlepass') &&
-    !modifiers.includes('wrapped')
-  ) {
-    messages.push({ type: 'error', text: 'Landing to blind exige handlepass ou wrapped.' });
-  }
-
-  if (modifiers.includes('double') && body?.axis !== 'inverted' && degrees < 540) {
-    messages.push({
-      type: 'error',
-      text: 'Double precisa de invertido ou spin 540°+ para fechar seguro.',
-    });
-  }
-
-  if (body?.flip && body.axis !== 'inverted' && !AIR_FLIP_AXIS_EXCEPTIONS.has(body.flip)) {
-    messages.push({
-      type: 'warning',
-      text: 'Considere usar eixo inverted para esse flip — exceções como Blind Judge são aceitas.',
-    });
-  }
-
-  return messages;
-};
-
-const scoreAir = (entry, body, exit) => {
-  const modifiers = ensureArray(body?.modifiers);
-  const baseAir = 60;
-  const entryBonus =
-    (entry?.stance === 'switch' ? 8 : 0) +
-    (AIR_EDGE_LOAD_BONUS[entry?.edge_load] ?? 0) +
-    (entry?.release === 'ole_wrapped' ? 6 : 0);
-
-  const degrees = Number(body?.degrees ?? 0);
-  const spinBonus = Math.max(0, (degrees / 180) * 8);
-  const flipBonus = AIR_FLIP_BONUS[body?.flip ?? 'null'] ?? 0;
-  const axisBonus = body?.axis === 'inverted' ? 4 : 0;
-
-  const modifiersBonus = modifiers.reduce(
-    (total, modifier) => total + (AIR_MODIFIER_BONUS[modifier] ?? 6),
-    0
-  );
-
-  const landingBonus =
-    (exit?.landing_stance !== 'regular' ? 10 : 0) + (AIR_LANDING_STYLE_BONUS[exit?.landing_style] ?? 0);
-
-  const baseTotal = baseAir + entryBonus + spinBonus + flipBonus + modifiersBonus + landingBonus + axisBonus;
-
-  const synergyFlags = [
-    Boolean(body?.flip),
-    degrees >= 540,
-    modifiers.includes('handlepass'),
-    modifiers.includes('blind'),
-    modifiers.includes('wrapped') || entry?.release === 'ole_wrapped',
-  ];
-
-  const synergyFactor = Math.min(synergyFlags.filter(Boolean).length * 0.05, 0.25);
-  const synergyBonus = Math.round(baseTotal * synergyFactor);
-  const total = Math.round(baseTotal + synergyBonus);
-
-  const progress = Math.min(total / 540, 1);
-  let level = 'Iniciante';
-  if (total >= 320) level = 'Avançado';
-  else if (total >= 220) level = 'Intermediário';
-
-  return {
-    base: baseAir,
-    entry: Math.round(entryBonus),
-    spin: Math.round(spinBonus),
-    flip: flipBonus,
-    modifiers: modifiersBonus,
-    landing: landingBonus,
-    synergyBonus,
-    synergyPercent: Math.round(synergyFactor * 100),
-    total,
-    progress,
-    level,
-  };
-};
-
-const renderSurface = (entry, body, exit) => {
-  if (!entry || !body || !exit) return 'Monte a surface trick para visualizar a prévia.';
-
-  const modifiers = ensureArray(body.modifiers);
-  const baseParts = [
-    entry.approach,
-    entry.stance === 'switch' ? 'switch' : null,
-    findLabel(SURFACE_MOVE_OPTIONS, body.move),
-  ];
-
-  if (body.degrees) {
-    baseParts.push(body.direction ? `${body.direction}${body.degrees}` : `${body.degrees}°`);
-  }
-
-  const modifierText = modifiers.length
-    ? ` (${modifiers.map((modifier) => findLabel(SURFACE_MODIFIER_OPTIONS, modifier)).join(' • ')})`
-    : '';
-
-  const landingParts = [];
-  if (exit.end_style !== 'normal') landingParts.push(findLabel(SURFACE_EXIT_STYLE_OPTIONS, exit.end_style));
-  if (exit.end_stance !== 'regular') landingParts.push(findLabel(SURFACE_EXIT_STANCE_OPTIONS, exit.end_stance));
-  const landingText = landingParts.length ? `, ${landingParts.join(' ')}` : '';
-
-  return `${baseParts.filter(Boolean).join(' ')}${modifierText}${landingText}`.trim();
-};
-
-const validateSurface = (entry, body, exit) => {
-  const messages = [];
-  const modifiers = ensureArray(body?.modifiers);
-
-  if (
-    exit?.end_style === 'to_blind' &&
-    !modifiers.includes('handlepass') &&
-    !modifiers.includes('blind')
-  ) {
-    messages.push({
-      type: 'error',
-      text: 'Para sair to blind, adicione handlepass ou blind.',
-    });
-  }
-
-  const allowedDegrees = SURFACE_MOVE_DEGREE_MAP[body?.move] ?? [];
-  if (allowedDegrees.length && !allowedDegrees.includes(body?.degrees ?? 0)) {
-    messages.push({
-      type: 'warning',
-      text: 'A rotação escolhida não é comum para esse movimento de surface.',
-    });
-  }
-
-  if (modifiers.includes('butter') && !String(body?.move ?? '').toLowerCase().includes('butter')) {
-    messages.push({
-      type: 'warning',
-      text: 'O modifier butter costuma acompanhar manobras Butter — confirme se faz sentido.',
-    });
-  }
-
-  return messages;
-};
-
-const scoreSurface = (entry, body, exit) => {
-  const modifiers = ensureArray(body?.modifiers);
-  const baseSurface = 20;
-  const moveBonus = SURFACE_MOVE_BONUS[body?.move] ?? 6;
-  const spinBonus = Math.max(0, (Number(body?.degrees ?? 0) / 180) * 6);
-
-  const modifiersBonus = modifiers.reduce(
-    (total, modifier) => total + (SURFACE_MODIFIER_BONUS[modifier] ?? 4),
-    0
-  );
-
-  const exitBonus =
-    (exit?.end_stance !== 'regular' ? 6 : 0) + (SURFACE_EXIT_STYLE_BONUS[exit?.end_style] ?? 0);
-
-  const baseTotal = baseSurface + moveBonus + spinBonus + modifiersBonus + exitBonus;
-
-  const synergyFlags = [
-    entry?.stance === 'switch',
-    Number(body?.degrees ?? 0) >= 360,
-    modifiers.includes('handlepass'),
-    modifiers.includes('blind') || exit?.end_style === 'to_blind',
-    modifiers.includes('butter') || String(body?.move ?? '').includes('Butter'),
-  ];
-
-  const synergyFactor = Math.min(synergyFlags.filter(Boolean).length * 0.05, 0.2);
-  const synergyBonus = Math.round(baseTotal * synergyFactor);
-  const total = Math.round(baseTotal + synergyBonus);
-
-  const progress = Math.min(total / 180, 1);
-  let level = 'Iniciante';
-  if (total >= 110) level = 'Avançado';
-  else if (total >= 70) level = 'Intermediário';
-
-  return {
-    base: baseSurface,
-    move: moveBonus,
-    spin: Math.round(spinBonus),
-    modifiers: modifiersBonus,
-    exit: exitBonus,
-    synergyBonus,
-    synergyPercent: Math.round(synergyFactor * 100),
-    total,
-    progress,
-    level,
-  };
+const DIVISION_HINTS = {
+  approach: 'Selecione o edge usado na aproximação.',
+  entry: 'Escolha como você entra/pop no obstáculo.',
+  spins: 'Informe a rotação principal da manobra.',
+  grabs: 'Marque o grab aplicado (ou "Sem grab").',
+  base_moves: 'Escolha o movimento base executado.',
 };
 
 
-const AirForm = ({
-  entry,
-  body,
-  exit,
-  onEntryChange,
-  onBodyChange,
-  onToggleModifier,
-  onExitChange,
-  preview,
-  xp,
-  validationMessages,
-  exportJson,
-  slug,
-}) => {
-  const modifiers = ensureArray(body.modifiers);
-
-  return (
-    <YupCard style={styles.editorCard}>
-      <View style={styles.slugRow}>
-        <Icon name="tag" size={16} color={colors.textSecondary} />
-        <Text style={styles.slugText}>{slug}</Text>
-      </View>
-
-      <View style={styles.editorSection}>
-        <View style={styles.editorHeader}>
-          <Icon name="airplanemode-active" size={18} color={colors.primary} />
-          <Text style={styles.editorTitle}>Air trick</Text>
-        </View>
-
-        <Text style={styles.fieldLabel}>Approach</Text>
-        <View style={styles.railChipRow}>
-          {AIR_APPROACH_OPTIONS.map((option) => {
-            const isActive = entry.approach === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChip, isActive && styles.railChipActive]}
-                onPress={() => onEntryChange('approach', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={styles.fieldLabel}>Stance</Text>
-        <View style={styles.railChipRow}>
-          {AIR_STANCE_OPTIONS.map((option) => {
-            const isActive = entry.stance === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                onPress={() => onEntryChange('stance', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={styles.fieldLabel}>Edge load</Text>
-        <View style={styles.railChipRow}>
-          {AIR_EDGE_LOAD_OPTIONS.map((option) => {
-            const isActive = entry.edge_load === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                onPress={() => onEntryChange('edge_load', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={styles.fieldLabel}>Release</Text>
-        <View style={styles.railChipRowWrap}>
-          {AIR_RELEASE_OPTIONS.map((option) => {
-            const isActive = entry.release === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChip, isActive && styles.railChipActive]}
-                onPress={() => onEntryChange('release', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={styles.editorSection}>
-        <View style={styles.editorHeader}>
-          <Icon name="360" size={18} color={colors.primary} />
-          <Text style={styles.editorTitle}>Rotação</Text>
-        </View>
-
-        <Text style={styles.fieldLabel}>Axis</Text>
-        <View style={styles.railChipRow}>
-          {AIR_AXIS_OPTIONS.map((option) => {
-            const isActive = body.axis === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                onPress={() => onBodyChange('axis', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={styles.railOptionGrid}>
-          <View style={styles.railOptionColumn}>
-            <Text style={styles.fieldLabel}>Direção</Text>
-            <View style={styles.railChipRow}>
-              {AIR_DIRECTION_OPTIONS.map((option) => {
-                const isActive = body.direction === option.id;
-                return (
-                  <TouchableOpacity
-                    key={option.id}
-                    style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                    onPress={() => onBodyChange('direction', option.id)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-          <View style={styles.railOptionColumn}>
-            <Text style={styles.fieldLabel}>Graus</Text>
-            <View style={styles.railChipRowWrap}>
-              {AIR_DEGREES_OPTIONS.map((option) => {
-                const isActive = body.degrees === option.id;
-                return (
-                  <TouchableOpacity
-                    key={option.id}
-                    style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                    onPress={() => onBodyChange('degrees', option.id)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        </View>
-
-        <Text style={styles.fieldLabel}>Flip</Text>
-        <View style={styles.railChipRowWrap}>
-          {AIR_FLIP_OPTIONS.map((option) => {
-            const isActive = body.flip === option.id;
-            return (
-              <TouchableOpacity
-                key={option.label ?? 'sem-flip'}
-                style={[styles.railChip, isActive && styles.railChipActive]}
-                onPress={() => onBodyChange('flip', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={styles.fieldLabel}>Modifiers</Text>
-        <View style={styles.railChipRowWrap}>
-          {AIR_MODIFIER_OPTIONS.map((option) => {
-            const isActive = modifiers.includes(option.id);
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railModifierChip, isActive && styles.railModifierChipActive]}
-                onPress={() => onToggleModifier(option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railModifierText, isActive && styles.railModifierTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={styles.editorSection}>
-        <View style={styles.editorHeader}>
-          <Icon name="flight-land" size={18} color={colors.primary} />
-          <Text style={styles.editorTitle}>Saída</Text>
-        </View>
-
-        <Text style={styles.fieldLabel}>Landing stance</Text>
-        <View style={styles.railChipRow}>
-          {AIR_LANDING_STANCE_OPTIONS.map((option) => {
-            const isActive = exit.landing_stance === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                onPress={() => onExitChange('landing_stance', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={styles.fieldLabel}>Landing style</Text>
-        <View style={styles.railChipRowWrap}>
-          {AIR_LANDING_STYLE_OPTIONS.map((option) => {
-            const isActive = exit.landing_style === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChip, isActive && styles.railChipActive]}
-                onPress={() => onExitChange('landing_style', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={styles.editorSection}>
-        <View style={styles.editorHeader}>
-          <Icon name="textsms" size={18} color={colors.primary} />
-          <Text style={styles.editorTitle}>Prévia</Text>
-        </View>
-        <Text style={styles.previewText}>{preview}</Text>
-        <View style={styles.kickerXpSummary}>
-          <View style={styles.kickerXpBar}>
-            <View style={[styles.kickerXpFill, { width: `${Math.max(xp.progress * 100, 6)}%` }]} />
-          </View>
-          <Text style={styles.kickerXpLevel}>{xp.level}</Text>
-          <Text style={styles.kickerXpBreakdownLabel}>
-            {`Entrada ${formatNumber(xp.entry)} • Spin ${formatNumber(xp.spin)} • Flip ${formatNumber(xp.flip)} • Mods ${formatNumber(xp.modifiers)} • Landing ${formatNumber(xp.landing)} • Sinergia +${formatNumber(xp.synergyBonus)} (${xp.synergyPercent}%) = ${formatNumber(xp.total)} XP`}
-          </Text>
-        </View>
-        <View style={styles.kickerJsonBox}>
-          <Text style={styles.kickerJsonLabel}>JSON exportado</Text>
-          <Text style={styles.kickerJsonText}>{exportJson}</Text>
-        </View>
-      </View>
-
-      {validationMessages.length ? (
-        <View style={styles.railMessages}>
-          {validationMessages.map((message, index) => (
-            <View
-              key={`air-msg-${index}`}
-              style={[
-                styles.railMessage,
-                message.type === 'error' ? styles.railMessageError : styles.railMessageWarning,
-              ]}
-            >
-              <Icon
-                name={message.type === 'error' ? 'error-outline' : 'warning'}
-                size={18}
-                color={message.type === 'error' ? colors.danger : colors.warning}
-              />
-              <Text style={styles.railMessageText}>{message.text}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-    </YupCard>
-  );
-};
-
-const SurfaceForm = ({
-  entry,
-  body,
-  exit,
-  onEntryChange,
-  onBodyChange,
-  onToggleModifier,
-  onExitChange,
-  preview,
-  xp,
-  validationMessages,
-  exportJson,
-  slug,
-}) => {
-  const modifiers = ensureArray(body.modifiers);
-
-  return (
-    <YupCard style={styles.editorCard}>
-      <View style={styles.slugRow}>
-        <Icon name="tag" size={16} color={colors.textSecondary} />
-        <Text style={styles.slugText}>{slug}</Text>
-      </View>
-
-      <View style={styles.editorSection}>
-        <View style={styles.editorHeader}>
-          <Icon name="waves" size={18} color={colors.primary} />
-          <Text style={styles.editorTitle}>Surface trick</Text>
-        </View>
-
-        <Text style={styles.fieldLabel}>Approach</Text>
-        <View style={styles.railChipRow}>
-          {SURFACE_APPROACH_OPTIONS.map((option) => {
-            const isActive = entry.approach === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChip, isActive && styles.railChipActive]}
-                onPress={() => onEntryChange('approach', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={styles.fieldLabel}>Stance</Text>
-        <View style={styles.railChipRow}>
-          {SURFACE_STANCE_OPTIONS.map((option) => {
-            const isActive = entry.stance === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                onPress={() => onEntryChange('stance', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={styles.fieldLabel}>Velocidade</Text>
-        <View style={styles.railChipRowWrap}>
-          {SURFACE_SPEED_OPTIONS.map((option) => {
-            const isActive = entry.speed === option.id;
-            return (
-              <TouchableOpacity
-                key={option.label ?? 'speed'}
-                style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                onPress={() => onEntryChange('speed', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={styles.editorSection}>
-        <View style={styles.editorHeader}>
-          <Icon name="sync" size={18} color={colors.primary} />
-          <Text style={styles.editorTitle}>Corpo</Text>
-        </View>
-
-        <Text style={styles.fieldLabel}>Move</Text>
-        <View style={styles.railChipRowWrap}>
-          {SURFACE_MOVE_OPTIONS.map((option) => {
-            const isActive = body.move === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChip, isActive && styles.railChipActive]}
-                onPress={() => onBodyChange('move', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={styles.railOptionGrid}>
-          <View style={styles.railOptionColumn}>
-            <Text style={styles.fieldLabel}>Graus</Text>
-            <View style={styles.railChipRowWrap}>
-              {SURFACE_DEGREES_OPTIONS.map((option) => {
-                const isActive = body.degrees === option.id;
-                return (
-                  <TouchableOpacity
-                    key={option.id}
-                    style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                    onPress={() => onBodyChange('degrees', option.id)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-          <View style={styles.railOptionColumn}>
-            <Text style={styles.fieldLabel}>Direção</Text>
-            <View style={styles.railChipRowWrap}>
-              {SURFACE_DIRECTION_OPTIONS.map((option) => {
-                const isActive = body.direction === option.id;
-                return (
-                  <TouchableOpacity
-                    key={option.label ?? 'sem-direcao'}
-                    style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                    onPress={() => onBodyChange('direction', option.id)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        </View>
-
-        <Text style={styles.fieldLabel}>Modifiers</Text>
-        <View style={styles.railChipRowWrap}>
-          {SURFACE_MODIFIER_OPTIONS.map((option) => {
-            const isActive = modifiers.includes(option.id);
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railModifierChip, isActive && styles.railModifierChipActive]}
-                onPress={() => onToggleModifier(option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railModifierText, isActive && styles.railModifierTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={styles.editorSection}>
-        <View style={styles.editorHeader}>
-          <Icon name="flag" size={18} color={colors.primary} />
-          <Text style={styles.editorTitle}>Saída</Text>
-        </View>
-
-        <Text style={styles.fieldLabel}>Stance final</Text>
-        <View style={styles.railChipRow}>
-          {SURFACE_EXIT_STANCE_OPTIONS.map((option) => {
-            const isActive = exit.end_stance === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChipSmall, isActive && styles.railChipActive]}
-                onPress={() => onExitChange('end_stance', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={styles.fieldLabel}>Estilo final</Text>
-        <View style={styles.railChipRowWrap}>
-          {SURFACE_EXIT_STYLE_OPTIONS.map((option) => {
-            const isActive = exit.end_style === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.railChip, isActive && styles.railChipActive]}
-                onPress={() => onExitChange('end_style', option.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.railChipText, isActive && styles.railChipTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={styles.editorSection}>
-        <View style={styles.editorHeader}>
-          <Icon name="textsms" size={18} color={colors.primary} />
-          <Text style={styles.editorTitle}>Prévia</Text>
-        </View>
-        <Text style={styles.previewText}>{preview}</Text>
-        <View style={styles.kickerXpSummary}>
-          <View style={styles.kickerXpBar}>
-            <View style={[styles.kickerXpFill, { width: `${Math.max(xp.progress * 100, 6)}%` }]} />
-          </View>
-          <Text style={styles.kickerXpLevel}>{xp.level}</Text>
-          <Text style={styles.kickerXpBreakdownLabel}>
-            {`Base ${formatNumber(xp.base)} • Move ${formatNumber(xp.move)} • Spin ${formatNumber(xp.spin)} • Mods ${formatNumber(xp.modifiers)} • Saída ${formatNumber(xp.exit)} • Sinergia +${formatNumber(xp.synergyBonus)} (${xp.synergyPercent}%) = ${formatNumber(xp.total)} XP`}
-          </Text>
-        </View>
-        <View style={styles.kickerJsonBox}>
-          <Text style={styles.kickerJsonLabel}>JSON exportado</Text>
-          <Text style={styles.kickerJsonText}>{exportJson}</Text>
-        </View>
-      </View>
-
-      {validationMessages.length ? (
-        <View style={styles.railMessages}>
-          {validationMessages.map((message, index) => (
-            <View
-              key={`surface-msg-${index}`}
-              style={[
-                styles.railMessage,
-                message.type === 'error' ? styles.railMessageError : styles.railMessageWarning,
-              ]}
-            >
-              <Icon
-                name={message.type === 'error' ? 'error-outline' : 'warning'}
-                size={18}
-                color={message.type === 'error' ? colors.danger : colors.warning}
-              />
-              <Text style={styles.railMessageText}>{message.text}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-    </YupCard>
-  );
-};
 
 const formatNumber = (value) => {
   if (value == null) return '0';
@@ -1712,13 +110,7 @@ export default function UploadScreen() {
   const safeInsets = useSafeAreaInsets();
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [trick, setTrick] = useState('');
-  const [selectedTrick, setSelectedTrick] = useState(null);
-  const [trickSuggestions, setTrickSuggestions] = useState([]);
-  const [isLoadingTricks, setIsLoadingTricks] = useState(false);
-  const [isTrickInputFocused, setIsTrickInputFocused] = useState(false);
-  const trickRequestIdRef = useRef(0);
-  const trickBlurTimeoutRef = useRef(null);
+  const [selectedManeuverType, setSelectedManeuverType] = useState(null);
 
   const [videoPreview, setVideoPreview] = useState(null);
   const [videoInfo, setVideoInfo] = useState(null);
@@ -1729,10 +121,136 @@ export default function UploadScreen() {
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [targetFrameRate, setTargetFrameRate] = useState(30);
+  const [slowMotionFactor, setSlowMotionFactor] = useState(1);
+  const [slowMotionStart, setSlowMotionStart] = useState(0);
+  const [slowMotionEnd, setSlowMotionEnd] = useState(0);
 
   const [privacy, setPrivacy] = useState(PRIVACY_OPTIONS[0].id);
   const [selectedDifficulty, setSelectedDifficulty] = useState(null);
   const [selectedChallengeId, setSelectedChallengeId] = useState(null);
+
+  const emptyComponentPayload = useMemo(
+    () => ({
+      approach: 'none',
+      entry: 'none',
+      spins: 'none',
+      grabs: 'none',
+      base_moves: 'none',
+      modifiers: [],
+    }),
+    []
+  );
+
+  const [componentOptions, setComponentOptions] = useState(null);
+  const [componentPayload, setComponentPayload] = useState(emptyComponentPayload);
+  const [componentsLoading, setComponentsLoading] = useState(false);
+  const [componentError, setComponentError] = useState(null);
+  const [maneuverDisplayName, setManeuverDisplayName] = useState('');
+  const [hasEditedDisplayName, setHasEditedDisplayName] = useState(false);
+
+  const componentLookup = useMemo(() => {
+    if (!componentOptions) return null;
+    const map = {};
+    Object.entries(componentOptions).forEach(([division, list]) => {
+      list.forEach((item) => {
+        map[`${division}.${item.component_id}`] = item;
+      });
+    });
+    return map;
+  }, [componentOptions]);
+
+  const handleSelectComponentOption = useCallback((division, componentId) => {
+    setComponentPayload((prev) => ({
+      ...prev,
+      [division]: componentId,
+    }));
+    setHasEditedDisplayName(false);
+  }, []);
+
+  const toggleModifier = useCallback((modifierId) => {
+    setComponentPayload((prev) => {
+      const exists = prev.modifiers.includes(modifierId);
+      return {
+        ...prev,
+        modifiers: exists
+          ? prev.modifiers.filter((id) => id !== modifierId)
+          : [...prev.modifiers, modifierId],
+      };
+    });
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchComponents = async () => {
+      try {
+        setComponentsLoading(true);
+        setComponentError(null);
+        let response;
+        try {
+          response = await api.get('/skill-components/public');
+        } catch (publicError) {
+          console.warn('Falha ao carregar componentes públicos, tentando rota protegida...', publicError?.message);
+          response = await api.get('/skill-components');
+        }
+        const fetched = response.data?.components || null;
+        if (!isMounted) return;
+        if (!fetched) {
+          setComponentOptions(null);
+          return;
+        }
+        const normalized = {
+          approach: [...(fetched.approach || [])],
+          entry: [...(fetched.entry || [])],
+          spins: [...(fetched.spins || [])],
+          grabs: [...(fetched.grabs || [])],
+          base_moves: [...(fetched.base_moves || [])],
+          modifiers: [...(fetched.modifiers || [])],
+        };
+        const ensureNoneOption = (division, name, description) => {
+          const list = normalized[division];
+          if (!list.some((component) => component.component_id === 'none')) {
+            list.unshift({
+              component_id: 'none',
+              name,
+              description,
+              xp: 0,
+              division,
+            });
+          }
+        };
+        ensureNoneOption('approach', 'Sem approach/edge', 'Nenhum edge aplicado');
+        ensureNoneOption('entry', 'Sem entry', 'Nenhuma entrada aplicada');
+        ensureNoneOption('spins', 'Sem rotação', 'Nenhuma rotação aplicada');
+        ensureNoneOption('grabs', 'Sem grab', 'Nenhum grab atribuído');
+        ensureNoneOption('base_moves', 'Sem base move', 'Nenhum base selecionado');
+        setComponentOptions(normalized);
+        setComponentPayload((prev) => ({
+          ...prev,
+          approach: prev.approach !== 'none' ? prev.approach : normalized.approach[0]?.component_id || 'none',
+          entry: prev.entry !== 'none' ? prev.entry : normalized.entry[0]?.component_id || 'none',
+          spins: prev.spins !== 'none' ? prev.spins : normalized.spins[0]?.component_id || 'none',
+          grabs: prev.grabs !== 'none' ? prev.grabs : normalized.grabs[0]?.component_id || 'none',
+          base_moves: prev.base_moves !== 'none' ? prev.base_moves : normalized.base_moves[0]?.component_id || 'none',
+          modifiers: prev.modifiers || [],
+        }));
+      } catch (error) {
+        console.error('Erro ao carregar componentes:', error);
+        if (isMounted) {
+          setComponentError('Não foi possível carregar os componentes de manobra.');
+        }
+      } finally {
+        if (isMounted) {
+          setComponentsLoading(false);
+        }
+      }
+    };
+
+    fetchComponents();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+  const [presetUploadConfig, setPresetUploadConfig] = useState(null);
 
   const [parks, setParks] = useState([]);
   const [obstacles, setObstacles] = useState([]);
@@ -1740,35 +258,22 @@ export default function UploadScreen() {
   const [selectedObstacle, setSelectedObstacle] = useState(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [showParkModal, setShowParkModal] = useState(false);
+  const [showEditorModal, setShowEditorModal] = useState(false);
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState('Aguardando seleção de vídeo');
 
-  const [railEntry, setRailEntry] = useState(createDefaultRailEntry());
-  const [railSegments, setRailSegments] = useState([createDefaultRailSegment()]);
-  const [railExit, setRailExit] = useState(createDefaultRailExit());
-  const [railMode, setRailMode] = useState('simple');
-
-  const [kickerEntry, setKickerEntry] = useState(createDefaultKickerEntry());
-  const [kickerBody, setKickerBody] = useState(createDefaultKickerBody());
-  const [kickerExit, setKickerExit] = useState(createDefaultKickerExit());
-
-  const [airEntry, setAirEntry] = useState(createDefaultAirEntry());
-  const [airBody, setAirBody] = useState(createDefaultAirBody());
-  const [airExit, setAirExit] = useState(createDefaultAirExit());
-
-  const [surfaceEntry, setSurfaceEntry] = useState(createDefaultSurfaceEntry());
-  const [surfaceBody, setSurfaceBody] = useState(createDefaultSurfaceBody());
-  const [surfaceExit, setSurfaceExit] = useState(createDefaultSurfaceExit());
-
   const editorVideoRef = useRef(null);
-
-  const normalizedDuration = useMemo(() => {
-    if (!videoPreview?.duration) return videoDuration;
-    const raw = videoPreview.duration;
-    return raw > 600 ? raw / 1000 : raw;
-  }, [videoPreview, videoDuration]);
+  const hasSlowMotion =
+    slowMotionFactor !== 1 && slowMotionEnd - slowMotionStart >= MIN_TRIM_DURATION;
+  const slowMotionDuration = Math.max(0, slowMotionEnd - slowMotionStart);
+  const editorReadyRef = useRef(false);
+  const trimConfigRef = useRef({
+    start: 0,
+    end: 0,
+    slowFactor: 1,
+  });
 
   const clampedTrimStart = useMemo(
     () => Math.min(trimStart, Math.max(0, trimEnd - MIN_TRIM_DURATION)),
@@ -1777,6 +282,22 @@ export default function UploadScreen() {
   const clampedTrimEnd = useMemo(
     () => Math.max(trimEnd, clampedTrimStart + MIN_TRIM_DURATION),
     [trimEnd, clampedTrimStart]
+  );
+  const clampedSlowStart = useMemo(
+    () =>
+      Math.min(
+        Math.max(slowMotionStart, clampedTrimStart),
+        Math.max(clampedTrimStart, clampedTrimEnd - MIN_TRIM_DURATION)
+      ),
+    [slowMotionStart, clampedTrimStart, clampedTrimEnd]
+  );
+  const clampedSlowEnd = useMemo(
+    () =>
+      Math.max(
+        Math.min(slowMotionEnd, clampedTrimEnd),
+        clampedSlowStart + MIN_TRIM_DURATION
+      ),
+    [slowMotionEnd, clampedTrimEnd, clampedSlowStart]
   );
 
   useEffect(() => {
@@ -1795,6 +316,404 @@ export default function UploadScreen() {
       setThumbnailTime(trimEnd);
     }
   }, [trimStart, trimEnd, thumbnailTime]);
+
+  useEffect(() => {
+    if (clampedSlowStart !== slowMotionStart) {
+      setSlowMotionStart(clampedSlowStart);
+    }
+    if (clampedSlowEnd !== slowMotionEnd) {
+      setSlowMotionEnd(clampedSlowEnd);
+    }
+  }, [clampedSlowStart, clampedSlowEnd, slowMotionStart, slowMotionEnd]);
+
+  useEffect(() => {
+    trimConfigRef.current = {
+      start: trimStart,
+      end: trimEnd,
+      slowFactor: slowMotionFactor,
+    };
+  }, [trimStart, trimEnd, slowMotionFactor]);
+  const applyEditorPlaybackRate = useCallback(async () => {
+    const video = editorVideoRef.current;
+    if (!video || !editorReadyRef.current) return;
+    const factor = Math.max(0.25, Math.min(2, trimConfigRef.current.slowFactor || 1));
+    const playbackRate = factor === 0 ? 1 : 1 / factor;
+
+    try {
+      await video.setRateAsync(playbackRate, true);
+    } catch (error) {
+      console.warn('Erro ao ajustar velocidade do preview:', error);
+    }
+  }, []);
+
+  const seekToTrimStart = useCallback(
+    async (resumePlayback = false) => {
+      const video = editorVideoRef.current;
+      if (!video || !editorReadyRef.current) return;
+      const startMs = Math.max(0, Math.floor((trimConfigRef.current.start || 0) * 1000));
+
+      try {
+        await video.setPositionAsync(startMs);
+        if (resumePlayback && showEditorModal) {
+          await video.playAsync();
+        }
+      } catch (error) {
+        console.warn('Erro ao reposicionar preview:', error);
+      }
+    },
+    [showEditorModal]
+  );
+
+  const handleEditorStatusUpdate = useCallback((status) => {
+    if (!status?.isLoaded || !editorReadyRef.current) return;
+    const video = editorVideoRef.current;
+    if (!video) return;
+
+    const startMs = Math.max(0, Math.floor((trimConfigRef.current.start || 0) * 1000));
+    const endMsCandidate = Math.floor((trimConfigRef.current.end || 0) * 1000);
+    const endMs = Math.max(
+      startMs + MIN_TRIM_DURATION * 1000,
+      endMsCandidate > 0 ? endMsCandidate : startMs + MIN_TRIM_DURATION * 1000
+    );
+
+    if (status.positionMillis < startMs) {
+      video.setPositionAsync(startMs).catch(() => null);
+      return;
+    }
+
+    if (status.positionMillis > endMs || status.didJustFinish) {
+      video
+        .setPositionAsync(startMs)
+        .then(() => {
+          if (status.shouldPlay) {
+            video.playAsync().catch(() => null);
+          }
+        })
+        .catch(() => null);
+    }
+  }, []);
+
+  const handleEditorLoad = useCallback(async () => {
+    editorReadyRef.current = true;
+    await applyEditorPlaybackRate();
+    await seekToTrimStart(true);
+  }, [applyEditorPlaybackRate, seekToTrimStart]);
+
+  useEffect(() => {
+    if (!showEditorModal) {
+      editorReadyRef.current = false;
+      try {
+        editorVideoRef.current?.pauseAsync?.();
+      } catch (error) {
+        console.warn('Erro ao pausar pré-visualização:', error);
+      }
+      return;
+    }
+    editorReadyRef.current = false;
+  }, [showEditorModal]);
+
+  useEffect(() => {
+    if (!showEditorModal || !editorReadyRef.current) return;
+    applyEditorPlaybackRate();
+  }, [showEditorModal, slowMotionFactor, applyEditorPlaybackRate]);
+
+  useEffect(() => {
+    if (!showEditorModal || !editorReadyRef.current) return;
+    seekToTrimStart();
+  }, [showEditorModal, trimStart, seekToTrimStart]);
+  const handleGenerateThumbnail = useCallback(
+    async (timeInSeconds, sourceVideo = null) => {
+      const targetTime = Number.isFinite(timeInSeconds) ? Math.max(0, timeInSeconds) : 0;
+      const videoUri = sourceVideo?.uri || videoPreview?.uri;
+      if (!videoUri) return;
+
+      try {
+        setIsGeneratingThumbnail(true);
+        const result = await VideoThumbnails.getThumbnailAsync(videoUri, {
+          time: targetTime * 1000,
+        });
+        setThumbnailPreview(result?.uri || null);
+        setThumbnailTime(targetTime);
+      } catch (error) {
+        console.warn('Não foi possível gerar thumbnail personalizada:', error);
+        setThumbnailPreview(null);
+      } finally {
+        setIsGeneratingThumbnail(false);
+      }
+    },
+    [videoPreview?.uri]
+  );
+
+  const handleVideoSelection = useCallback(async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão necessária', 'Precisamos de acesso à sua galeria para selecionar um vídeo.');
+        return;
+      }
+
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!pickerResult.canceled && pickerResult.assets?.[0]) {
+        setUploadStatus('Verificando vídeo...');
+
+        const video = pickerResult.assets[0];
+        const preparation = await uploadService.prepareVideo(video);
+
+        if (!preparation.valid) {
+          Alert.alert('Vídeo inválido', preparation.error);
+          setUploadStatus('Aguardando seleção de vídeo');
+          return;
+        }
+
+        setVideoPreview(preparation.videoFile ?? video);
+        setVideoInfo(preparation);
+        const durationRaw = typeof video.duration === 'number' ? video.duration : 0;
+        const normalized = durationRaw > 600 ? durationRaw / 1000 : durationRaw;
+        const safeDuration = Math.max(normalized || 0, MIN_TRIM_DURATION);
+        setVideoDuration(safeDuration);
+        setTrimStart(0);
+        setTrimEnd(safeDuration);
+
+        const defaultThumbnailTime = Math.min(1.5, Math.max(safeDuration / 2, 0));
+        await handleGenerateThumbnail(defaultThumbnailTime, video);
+
+        const defaultSlowStart = Math.max(0, safeDuration * 0.25);
+        const defaultSlowEnd = Math.min(safeDuration, defaultSlowStart + Math.max(2, safeDuration * 0.3));
+        setSlowMotionStart(defaultSlowStart);
+        setSlowMotionEnd(defaultSlowEnd);
+        setSlowMotionFactor(1);
+        setTargetFrameRate(30);
+        setUploadProgress(0);
+        setUploadStatus('Vídeo selecionado! Ajuste os detalhes antes de postar.');
+        setShowEditorModal(true);
+
+        const qualityCheck = await uploadService.validateVideoQuality(video);
+        if (qualityCheck?.warning) {
+          Alert.alert('Atenção', qualityCheck.warning);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao selecionar vídeo:', error);
+
+      if (
+        Platform.OS === 'ios' &&
+        typeof error?.message === 'string' &&
+        error.message.includes('PHPhotosErrorDomain')
+      ) {
+        Alert.alert(
+          'Vídeo precisa ser baixado',
+          'Esse vídeo está apenas no iCloud. Abra o app Fotos, baixe o arquivo e tente novamente.'
+        );
+        setUploadStatus('Vídeo indisponível no dispositivo. Baixe do iCloud e tente novamente.');
+        return;
+      }
+
+      Alert.alert('Erro', 'Não foi possível selecionar o vídeo.');
+      setUploadStatus('Aguardando seleção de vídeo');
+    }
+  }, [handleGenerateThumbnail]);
+
+  const handleRemoveVideo = useCallback(() => {
+    setVideoPreview(null);
+    setVideoInfo(null);
+    setVideoDuration(0);
+    setTrimStart(0);
+    setTrimEnd(0);
+    setThumbnailTime(0);
+    setThumbnailPreview(null);
+    setSlowMotionStart(0);
+    setSlowMotionEnd(0);
+    setSlowMotionFactor(1);
+    setTargetFrameRate(30);
+    setShowEditorModal(false);
+    editorReadyRef.current = false;
+    setUploadProgress(0);
+    setUploadStatus('Aguardando seleção de vídeo');
+  }, []);
+
+  const handleResetSlowMotion = useCallback(() => {
+    setSlowMotionFactor(1);
+    setSlowMotionStart(trimStart);
+    setSlowMotionEnd(trimEnd);
+  }, [trimStart, trimEnd]);
+
+  const handleCloseEditor = useCallback(() => {
+    try {
+      editorVideoRef.current?.pauseAsync?.();
+    } catch (error) {
+      console.warn('Erro ao pausar pré-visualização:', error);
+    }
+    editorReadyRef.current = false;
+    setShowEditorModal(false);
+  }, []);
+
+  const handleSelectDifficulty = useCallback(
+    (optionId) => {
+      if (isUploading) return;
+      setSelectedDifficulty((prev) => (prev === optionId ? null : optionId));
+    },
+    [isUploading]
+  );
+
+  const handleSelectPrivacy = useCallback(
+    (optionId) => {
+      if (isUploading) return;
+      setPrivacy(optionId);
+    },
+    [isUploading]
+  );
+
+  const handleSubmit = useCallback(async () => {
+    if (isUploading) return;
+
+    if (!videoPreview) {
+      Alert.alert('Atenção', 'Selecione um vídeo da galeria antes de postar.');
+      return;
+    }
+
+    const effectiveManeuverType = (presetUploadConfig?.maneuverType || selectedManeuverType || '').toLowerCase();
+    const resolvedManeuverName = presetUploadConfig?.maneuverName || maneuverName;
+
+    if (!effectiveManeuverType || !resolvedManeuverName) {
+      Alert.alert('Atenção', 'Selecione um estilo de manobra e defina os detalhes antes de enviar.');
+      return;
+    }
+
+    if (!selectedPark) {
+      Alert.alert('Atenção', 'Escolha o parque onde a sessão foi gravada.');
+      return;
+    }
+
+    const payloadToSend = presetUploadConfig?.maneuverPayload
+      ? ensureManeuverPayload(presetUploadConfig.maneuverPayload)
+      : ensureManeuverPayload(componentPayload);
+
+    const displayName = (maneuverDisplayName || '').trim();
+    if (displayName) {
+      payloadToSend.displayName = displayName;
+    }
+
+    const hasAllDivisions = COMPONENT_DIVISIONS.every(
+      (division) => payloadToSend[division.id] && payloadToSend[division.id] !== ''
+    );
+
+    if (!payloadToSend || !hasAllDivisions) {
+      Alert.alert(
+        'Manobra incompleta',
+        'Defina todos os componentes da manobra antes de enviar o vídeo.'
+      );
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadStatus('Preparando upload...');
+
+    try {
+      const activeTrimStart = Math.max(0, Math.min(trimStart, trimEnd - MIN_TRIM_DURATION));
+      const activeTrimEnd = Math.max(activeTrimStart + MIN_TRIM_DURATION, trimEnd);
+
+      const effectiveFactor = Math.max(0.25, Math.min(2, slowMotionFactor));
+      const sanitizedFrameRate = Math.max(15, Math.min(60, targetFrameRate));
+
+      const videoData = {
+        videoFile: videoPreview,
+        parkId: selectedPark,
+        obstacleId: selectedObstacle,
+        visibility: privacy,
+        challengeId: selectedChallengeId,
+        trimStart: activeTrimStart,
+        trimEnd: activeTrimEnd,
+        thumbnailTime: thumbnailTime,
+        targetFrameRate: sanitizedFrameRate,
+        slowMotionFactor: effectiveFactor,
+        maneuverType: effectiveManeuverType,
+        maneuverName: resolvedManeuverName,
+        maneuverDisplayName: displayName || resolvedManeuverName,
+        trickShortName: displayName || resolvedManeuverName,
+        maneuverPayload: payloadToSend,
+        questNodeId: presetUploadConfig?.questNodeId || null,
+      };
+
+      const uploadResult = await uploadService.uploadVideo(videoData, {
+        maxRetries: 3,
+        timeout: 180000,
+        onProgress: ({ progress, progressPercent, attempt }) => {
+          setUploadProgress(progress);
+          const progressLabel = Math.round(progressPercent);
+          setUploadStatus(
+            attempt && attempt > 1
+              ? `Tentativa ${attempt} • ${progressLabel}%`
+              : `Upload em ${progressLabel}%`
+          );
+        },
+        onRetry: (attempt, delay) => {
+          setUploadStatus(`Tentativa ${attempt} reinicia em ${Math.round(delay / 1000)}s...`);
+        },
+      });
+
+      if (!uploadResult?.success) {
+        throw new Error(uploadResult?.error || 'Upload falhou. Tente novamente.');
+      }
+
+      const serverProcessing = Boolean(uploadResult?.serverProcessing);
+
+      await videoService.clearFeedCache();
+
+      setVideoPreview(null);
+      setVideoInfo(null);
+      setSelectedObstacle(null);
+      setSelectedDifficulty(null);
+      setSelectedChallengeId(null);
+      setPresetUploadConfig(null);
+      setUploadStatus(
+        serverProcessing
+          ? 'Vídeo enviado! Processando na nuvem...'
+          : 'Vídeo enviado! Continue criando.'
+      );
+      setComponentPayload(emptyComponentPayload);
+      setSelectedManeuverType(null);
+
+      const compressionSavings = Number(uploadResult?.data?.video?.compression_savings ?? 0);
+      const completionMessage = serverProcessing
+        ? 'Vídeo enviado! Estamos finalizando o processamento e você será notificado em instantes.'
+        : compressionSavings > 0
+            ? `Vídeo enviado e comprimido em ${compressionSavings}% — mais rápido para carregar e salvar espaço.`
+            : 'Vídeo enviado com sucesso. Nenhuma compressão adicional foi aplicada (o arquivo já estava otimizado ou o serviço de compressão estava indisponível).';
+      const warningNote = uploadResult?.warning ? `\nDetalhes: ${uploadResult.warning}` : '';
+
+      Alert.alert(serverProcessing ? 'Processando...' : 'Processamento concluído', `${completionMessage}${warningNote}`);
+      setCurrentStep(1);
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      Alert.alert('Erro', error?.message || 'Não foi possível completar o upload.');
+      setUploadStatus('Erro ao enviar. Tente novamente.');
+    } finally {
+      setIsUploading(false);
+    }
+  }, [
+    isUploading,
+    videoPreview,
+    selectedPark,
+    trimStart,
+    trimEnd,
+    slowMotionFactor,
+    targetFrameRate,
+    privacy,
+    selectedObstacle,
+    selectedChallengeId,
+    thumbnailTime,
+    componentPayload,
+    presetUploadConfig,
+    maneuverName,
+    selectedManeuverType,
+    emptyComponentPayload,
+  ]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1820,7 +739,6 @@ export default function UploadScreen() {
   useEffect(() => {
     if (!presetChallenge) return;
 
-    if (presetChallenge.trick) setTrick(presetChallenge.trick);
     if (presetChallenge.parkId) setSelectedPark(presetChallenge.parkId);
     if (presetChallenge.obstacleId) setSelectedObstacle(presetChallenge.obstacleId);
     if (presetChallenge.difficulty) {
@@ -1829,16 +747,39 @@ export default function UploadScreen() {
     }
     if (presetChallenge.challengeId) setSelectedChallengeId(presetChallenge.challengeId);
 
-    setUploadStatus('Trick aplicada! Agora escolha um vídeo da galeria.');
+    const presetPayload = presetChallenge.maneuverPayload
+      ? ensureManeuverPayload(presetChallenge.maneuverPayload)
+      : null;
+    if (presetPayload) {
+      setComponentPayload(presetPayload);
+    }
+    if (presetChallenge.maneuverName) {
+      setManeuverDisplayName(presetChallenge.maneuverName);
+      setHasEditedDisplayName(true);
+    } else {
+      setHasEditedDisplayName(false);
+    }
+
+    setPresetUploadConfig({
+      maneuverPayload: presetPayload,
+      maneuverType: presetChallenge.maneuverType || null,
+      questNodeId: presetChallenge.questNodeId || null,
+      maneuverName: presetChallenge.maneuverName || null,
+    });
+
+    if (presetChallenge.maneuverType) {
+      setSelectedManeuverType(presetChallenge.maneuverType);
+    } else if (presetChallenge.specialization) {
+      const map = { slider: 'rail', kicker: 'kicker', surface: 'surface' };
+      const inferred = map[presetChallenge.specialization];
+      if (inferred) {
+        setSelectedManeuverType(inferred);
+      }
+    }
+
+    setUploadStatus('Manobra aplicada! Agora escolha um vídeo da galeria.');
     navigation.setParams?.({ presetChallenge: undefined });
   }, [presetChallenge, navigation]);
-
-  useEffect(() => () => {
-    if (trickBlurTimeoutRef.current) {
-      clearTimeout(trickBlurTimeoutRef.current);
-      trickBlurTimeoutRef.current = null;
-    }
-  }, []);
 
   const filteredObstacles = useMemo(() => {
     if (!selectedPark) return obstacles;
@@ -1851,38 +792,122 @@ export default function UploadScreen() {
     [parks, selectedPark]
   );
 
-  const handleChangeTrick = useCallback((value) => {
-    setTrick(value);
-    if (selectedTrick) {
-      const normalized = value.trim().toLowerCase();
-      const selectedName = (selectedTrick.nome || '').trim().toLowerCase();
-      const selectedShort = (selectedTrick.nome_curto || '').trim().toLowerCase();
-      if (!normalized || (normalized !== selectedName && normalized !== selectedShort)) {
-        setSelectedTrick(null);
-      }
-    }
-  }, [selectedTrick]);
+  const selectedObstacleData = useMemo(() => {
+    if (!selectedObstacle) return null;
+    return obstacles.find(
+      (obstacle) => obstacle.id === selectedObstacle || obstacle.obstacle_id === selectedObstacle
+    );
+  }, [obstacles, selectedObstacle]);
 
-  const handleSelectTrickSuggestion = useCallback((suggestion) => {
-    setSelectedTrick(suggestion);
-    setTrick(suggestion.nome);
-    setTrickSuggestions([]);
-    setIsTrickInputFocused(false);
-    if (trickBlurTimeoutRef.current) {
-      clearTimeout(trickBlurTimeoutRef.current);
-      trickBlurTimeoutRef.current = null;
+  const lookupName = useCallback(
+    (division, id) => componentLookup?.[`${division}.${id}`]?.display_name || componentLookup?.[`${division}.${id}`]?.name || '',
+    [componentLookup]
+  );
+
+  const cleanComponentName = useCallback(
+    (division, id) => {
+      const raw = lookupName(division, id);
+      if (!raw) return '';
+      const lower = raw.trim().toLowerCase();
+      if (!lower || lower === 'none' || lower.startsWith('sem ')) {
+        return '';
+      }
+      return raw.trim();
+    },
+    [lookupName]
+  );
+
+  const buildAutoDisplayName = useCallback(() => {
+    if (!componentLookup) return '';
+    const base = cleanComponentName('base_moves', componentPayload.base_moves);
+    const spin = cleanComponentName('spins', componentPayload.spins);
+    const grab = cleanComponentName('grabs', componentPayload.grabs);
+    const modifiers = (componentPayload.modifiers || [])
+      .map((id) => cleanComponentName('modifiers', id))
+      .filter(Boolean)
+      .slice(0, 2);
+
+    const parts = [];
+    if (base) parts.push(base);
+    if (spin) parts.push(spin);
+    if (grab) parts.push(grab);
+    if (modifiers.length) parts.push(...modifiers);
+
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+  }, [componentLookup, componentPayload, cleanComponentName]);
+
+  useEffect(() => {
+    if (hasEditedDisplayName) return;
+    const autoName = buildAutoDisplayName();
+    if (autoName && autoName !== maneuverDisplayName) {
+      setManeuverDisplayName(autoName);
     }
-    Keyboard.dismiss();
+  }, [buildAutoDisplayName, hasEditedDisplayName, maneuverDisplayName]);
+
+  const { maneuverPreview, maneuverName } = useMemo(() => {
+    const presetName = presetUploadConfig?.maneuverName?.trim();
+    const displayName = (maneuverDisplayName || '').trim();
+
+    if (!componentLookup) {
+      return { maneuverPreview: displayName || '', maneuverName: displayName || presetName || '' };
+    }
+
+    const parts = [
+      cleanComponentName('approach', componentPayload.approach),
+      cleanComponentName('entry', componentPayload.entry),
+      cleanComponentName('base_moves', componentPayload.base_moves),
+      cleanComponentName('spins', componentPayload.spins),
+      cleanComponentName('grabs', componentPayload.grabs),
+    ].filter(Boolean);
+
+    const modifiersNames = (componentPayload.modifiers || [])
+      .map((modifierId) => cleanComponentName('modifiers', modifierId))
+      .filter(Boolean);
+    if (modifiersNames.length) {
+      parts.push(modifiersNames.join(' + '));
+    }
+
+    const nameFromComponents =
+      cleanComponentName('base_moves', componentPayload.base_moves) ||
+      cleanComponentName('spins', componentPayload.spins) ||
+      '';
+
+    return {
+      maneuverPreview: displayName || parts.join(' • '),
+      maneuverName: displayName || presetName || nameFromComponents,
+    };
+  }, [
+    componentLookup,
+    componentPayload,
+    presetUploadConfig,
+    maneuverDisplayName,
+    lookupName,
+  ]);
+  const maneuverTypeLabel = useMemo(() => {
+    const found = MANEUVER_TYPES.find((type) => type.id === selectedManeuverType);
+    return found ? found.label : null;
+  }, [selectedManeuverType]);
+
+  const handleSelectManeuverType = useCallback((typeId) => {
+    setSelectedManeuverType((prev) => (prev === typeId ? null : typeId));
   }, []);
+
+  const handleResetManeuvers = useCallback(() => {
+    setComponentPayload(emptyComponentPayload);
+    setSelectedManeuverType(null);
+    setPresetUploadConfig(null);
+    setManeuverDisplayName('');
+    setHasEditedDisplayName(false);
+  }, [emptyComponentPayload]);
 
   const canAccessStep = useCallback(
     (step) => {
       if (step === 1) return true;
-      if (step === 2) return Boolean(trick.trim());
+      if (step === 2) return Boolean(selectedManeuverType);
       if (step === 3) return Boolean(videoPreview);
       return false;
     },
-    [trick, videoPreview]
+    [selectedManeuverType, videoPreview]
   );
 
   const goToStep = useCallback(
@@ -1894,13 +919,120 @@ export default function UploadScreen() {
     [currentStep, canAccessStep]
   );
 
-  // Additional handlers, memoized calculations and the UI will be defined below.
+  const renderParkModal = () => (
+    <Modal
+      animationType="slide"
+      transparent
+      visible={showParkModal}
+      onRequestClose={() => setShowParkModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <YupCard style={styles.modalCard}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Escolher parque</Text>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setShowParkModal(false)}>
+              <MaterialIcons name="close" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+            {parks.map((park) => {
+              const isSelected = selectedPark === park.id;
+              return (
+                <TouchableOpacity
+                  key={park.id}
+                  style={[styles.modalRow, isSelected && styles.modalRowSelected]}
+                  onPress={() => {
+                    setSelectedPark(park.id);
+                    setSelectedObstacle(null);
+                    setShowParkModal(false);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.modalRowIcon}>
+                    <MaterialIcons name="flag" size={16} color={colors.primary} />
+                  </View>
+                  <View style={styles.modalRowContent}>
+                    <Text style={styles.modalRowTitle}>{park.name}</Text>
+                    {park.city ? (
+                      <Text style={styles.modalRowSubtitle}>
+                        {park.city} • {park.state}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {isSelected ? (
+                    <MaterialIcons name="check-circle" size={18} color={colors.primary} />
+                  ) : (
+                    <MaterialIcons name="chevron-right" size={18} color={colors.textSecondary} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </YupCard>
+      </View>
+    </Modal>
+  );
+
+  const renderEditorModal = () => (
+    <Modal
+      animationType="slide"
+      visible={showEditorModal}
+      presentationStyle="fullScreen"
+      onRequestClose={handleCloseEditor}
+    >
+      <SafeAreaView style={styles.editorSafeArea}>
+        <View style={[styles.editorTopBar, { paddingTop: safeInsets.top + spacing.md }]}>
+          <TouchableOpacity style={styles.editorTopButton} onPress={handleCloseEditor}>
+            <MaterialIcons name="close" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.editorTopTitle}>Preview</Text>
+          <TouchableOpacity style={styles.editorTopButton} onPress={handleCloseEditor}>
+            <MaterialIcons name="check" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView
+          contentContainerStyle={styles.editorScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.editorVideoPreview}>
+            {videoPreview?.uri ? (
+              <Video
+                ref={editorVideoRef}
+                style={styles.editorVideo}
+                source={{ uri: videoPreview.uri }}
+                resizeMode="contain"
+                shouldPlay
+                useNativeControls
+                onLoad={handleEditorLoad}
+                onPlaybackStatusUpdate={handleEditorStatusUpdate}
+              />
+            ) : (
+              <ImageBackground
+                source={previewPlaceholder}
+                style={styles.editorVideo}
+                imageStyle={styles.editorVideo}
+              />
+            )}
+            <View style={styles.editorVideoOverlay}>
+              <MaterialIcons name="timelapse" size={20} color={colors.surface} />
+              <Text style={styles.editorVideoOverlayText}>
+                {formatTimestamp((trimEnd - trimStart) * slowMotionFactor)}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.editorHint}>
+            O vídeo será reproduzido respeitando o corte atual. Ajuste os sliders no editor rápido para refinar.
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <YupBadge variant=\"primary\" style={styles.headerBadge}>
+          <YupBadge variant="primary" style={styles.headerBadge}>
             Upload Session
           </YupBadge>
           <Text style={styles.headerTitle}>Fluxo de upload Y'UP</Text>
@@ -1933,7 +1065,7 @@ export default function UploadScreen() {
                     ]}
                   >
                     {isComplete ? (
-                      <Icon name=\"check\" size={16} color={colors.background} />
+                      <MaterialIcons name="check" size={16} color={colors.background} />
                     ) : (
                       <Text style={styles.stepBadgeText}>{step.id}</Text>
                     )}
@@ -1961,8 +1093,1319 @@ export default function UploadScreen() {
           })}
         </View>
 
-        {/* Placeholder for step-specific content; actual rendering will be added below. */}
+        <View style={styles.stepContent}>
+          {currentStep === 1 ? (
+            <View style={styles.maneuverStack}>
+              <YupCard style={styles.maneuverTypeCard}>
+                <YupSectionHeader
+                  title="Escolha o estilo"
+                  subtitle="Selecione o módulo que deseja detalhar agora."
+                />
+                <View style={styles.maneuverTypeRow}>
+                  {MANEUVER_TYPES.map((type) => {
+                    const isActive = selectedManeuverType === type.id;
+                    return (
+                      <TouchableOpacity
+                        key={type.id}
+                        style={[styles.maneuverTypeOption, isActive && styles.maneuverTypeOptionActive]}
+                        activeOpacity={0.85}
+                        onPress={() => handleSelectManeuverType(type.id)}
+                      >
+                        <Text style={[styles.maneuverTypeLabel, isActive && styles.maneuverTypeLabelActive]}>
+                          {type.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </YupCard>
+
+              <YupCard style={styles.componentCard}>
+                <YupInput
+                  label="Nome de exibição da manobra"
+                  placeholder="Ex.: Backroll Indy"
+                  value={maneuverDisplayName}
+                  onChangeText={(text) => {
+                    setManeuverDisplayName(text);
+                    setHasEditedDisplayName(true);
+                  }}
+                  autoCapitalize="words"
+                />
+                <Text style={styles.displayNameHint}>
+                  Esse nome curto aparece no feed. Os detalhes técnicos continuam no payload de componentes.
+                </Text>
+              </YupCard>
+
+              <YupCard style={styles.componentCard}>
+                <View style={styles.componentCardHeader}>
+                  <View>
+                    <Text style={styles.componentCardTitle}>Componentes da manobra</Text>
+                    <Text style={styles.componentCardSubtitle}>
+                      Escolha um componente em cada divisão para alinhar com o sistema do dashboard.
+                    </Text>
+                  </View>
+                  <YupButton
+                    variant="secondary"
+                    title="Resetar"
+                    onPress={handleResetManeuvers}
+                    style={styles.resetButton}
+                    textStyle={styles.resetButtonText}
+                  />
+                </View>
+
+                {componentError ? (
+                  <Text style={styles.componentError}>{componentError}</Text>
+                ) : null}
+
+                {componentsLoading ? (
+                  <View style={styles.componentLoading}>
+                    <ActivityIndicator color={colors.primary} />
+                    <Text style={styles.componentLoadingText}>Carregando componentes...</Text>
+                  </View>
+                ) : componentOptions ? (
+                  <>
+                    {COMPONENT_DIVISIONS.map((division) => {
+                      const options = componentOptions?.[division.id] || [];
+                      if (!options.length) return null;
+                      return (
+                        <View key={division.id} style={styles.componentDivision}>
+                          <Text style={styles.componentDivisionTitle}>{division.label}</Text>
+                          <Text style={styles.componentDivisionHint}>
+                            {DIVISION_HINTS[division.id]}
+                          </Text>
+                          <View style={styles.componentOptionList}>
+                            {options.map((option) => {
+                              const isActive =
+                                componentPayload[division.id] === option.component_id;
+                              return (
+                                <TouchableOpacity
+                                  key={option.component_id}
+                                  style={[
+                                    styles.componentOption,
+                                    isActive && styles.componentOptionActive,
+                                  ]}
+                                  onPress={() =>
+                                    handleSelectComponentOption(division.id, option.component_id)
+                                  }
+                                  activeOpacity={0.8}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.componentOptionName,
+                                      isActive && styles.componentOptionNameActive,
+                                    ]}
+                                  >
+                                    {option.name}
+                                  </Text>
+                                  <Text style={styles.componentOptionXp}>
+                                    {option.xp} XP
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      );
+                    })}
+
+                    {(componentOptions.modifiers || []).length ? (
+                      <View style={styles.componentDivision}>
+                        <Text style={styles.componentDivisionTitle}>Modifiers</Text>
+                        <Text style={styles.componentDivisionHint}>
+                          Combine modificadores extras para enriquecer a manobra.
+                        </Text>
+                        <View style={styles.componentOptionList}>
+                          {(componentOptions.modifiers || []).map((modifier) => {
+                            const isActive = componentPayload.modifiers.includes(
+                              modifier.component_id
+                            );
+                            return (
+                              <TouchableOpacity
+                                key={modifier.component_id}
+                                style={[
+                                  styles.componentOption,
+                                  isActive && styles.componentOptionActive,
+                                ]}
+                                onPress={() => toggleModifier(modifier.component_id)}
+                                activeOpacity={0.8}
+                              >
+                                <Text
+                                  style={[
+                                    styles.componentOptionName,
+                                    isActive && styles.componentOptionNameActive,
+                                  ]}
+                                >
+                                  {modifier.name}
+                                </Text>
+                                <Text style={styles.componentOptionXp}>{modifier.xp} XP</Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    ) : null}
+                  </>
+                ) : (
+                  <Text style={styles.maneuverPlaceholderText}>
+                    Nenhum componente carregado. Tente novamente mais tarde.
+                  </Text>
+                )}
+              </YupCard>
+            </View>
+          ) : null}
+
+          {currentStep === 2 ? (
+            <View style={styles.uploadStack}>
+              <YupCard style={styles.videoCard}>
+                <YupSectionHeader
+                  title="Vídeo da sessão"
+                  subtitle="Selecione o arquivo e acompanhe o status antes de seguir para a edição."
+                />
+
+                <TouchableOpacity
+                  style={styles.videoPreview}
+                  activeOpacity={videoPreview ? 0.9 : 1}
+                  onPress={() => {
+                    if (videoPreview) {
+                      setShowEditorModal(true);
+                    }
+                  }}
+                >
+                  <ImageBackground
+                    source={videoPreview?.uri ? { uri: videoPreview.uri } : previewPlaceholder}
+                    style={styles.previewBackground}
+                    imageStyle={styles.previewImage}
+                  >
+                    <View style={styles.previewOverlay}>
+                      <Icon
+                        name={videoPreview ? 'movie' : 'photo-library'}
+                        size={26}
+                        color={colors.textPrimary}
+                      />
+                      <Text style={styles.previewLabel}>
+                        {videoPreview ? 'Vídeo selecionado' : 'Selecione um vídeo da galeria'}
+                      </Text>
+                      <Text style={styles.previewStatus}>{uploadStatus}</Text>
+                    </View>
+                  </ImageBackground>
+                </TouchableOpacity>
+
+                <View style={styles.videoActions}>
+                  <YupButton
+                    title="Escolher mídia"
+                    onPress={handleVideoSelection}
+                    icon={<MaterialIcons name="upload" size={18} color={colors.textPrimary} />}
+                  />
+                  {videoPreview ? (
+                    <YupButton
+                      title="Abrir editor"
+                      variant="secondary"
+                      onPress={() => setShowEditorModal(true)}
+                      icon={<MaterialIcons name="content-cut" size={18} color={colors.textPrimary} />}
+                    />
+                  ) : null}
+                </View>
+
+                {maneuverPreview ? (
+                  <View style={styles.maneuverSummary}>
+                    <MaterialIcons name="insights" size={16} color={colors.primary} />
+                    <View style={styles.maneuverSummaryCopy}>
+                      <Text style={styles.maneuverSummaryLabel}>Manobra selecionada</Text>
+                      {maneuverTypeLabel ? (
+                        <Text style={styles.maneuverSummaryType}>{maneuverTypeLabel}</Text>
+                      ) : null}
+                      <Text style={styles.maneuverSummaryText}>{maneuverPreview}</Text>
+                    </View>
+                  </View>
+                ) : selectedManeuverType ? (
+                  <View style={styles.maneuverSummaryPlaceholder}>
+                    <MaterialIcons name="info-outline" size={16} color={colors.textSecondary} />
+                    <Text style={styles.maneuverSummaryPlaceholderText}>Finalize a configuração da manobra para gerar a prévia textual.</Text>
+                  </View>
+                ) : null}
+
+                {videoInfo ? (
+                  <View style={styles.videoMeta}>
+                    <View style={styles.metaItem}>
+                      <MaterialIcons name="schedule" size={16} color={colors.primary} />
+                      <Text style={styles.metaText}>{Math.round(videoDuration)}s</Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                      <MaterialIcons name="sd-card" size={16} color={colors.primary} />
+                      <Text style={styles.metaText}>
+                        {(videoInfo.sizeMB ?? 0).toFixed(1)} MB
+                      </Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                      <MaterialIcons name="high-quality" size={16} color={colors.primary} />
+                      <Text style={styles.metaText}>{videoInfo.resolution ?? '1080p'}</Text>
+                    </View>
+                  </View>
+                ) : null}
+
+                {isUploading ? (
+                  <View style={styles.progressTrack}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        { width: `${Math.max(uploadProgress * 100, 6)}%` },
+                      ]}
+                    />
+                  </View>
+                ) : null}
+
+                {videoPreview ? (
+                  <TouchableOpacity style={styles.removeButton} onPress={handleRemoveVideo}>
+                    <MaterialIcons name="delete-outline" size={18} color={colors.textSecondary} />
+                    <Text style={styles.removeButtonText}>Remover vídeo</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </YupCard>
+
+              <YupCard style={styles.metadataCard}>
+                <YupSectionHeader
+                  title="Metadados"
+                  subtitle="Assinale o parque, obstáculo e visibilidade do clipe."
+                />
+
+                <View style={styles.formField}>
+                  <Text style={styles.formLabel}>Parque</Text>
+                  <TouchableOpacity
+                    style={styles.selector}
+                    onPress={() => setShowParkModal(true)}
+                    activeOpacity={0.85}
+                    disabled={isLoadingData}
+                  >
+                    <MaterialIcons name="place" size={18} color={colors.primary} />
+                    <Text style={styles.selectorText}>
+                      {selectedParkData
+                        ? `${selectedParkData.name}${selectedParkData.city ? ` • ${selectedParkData.city}` : ''}`
+                        : isLoadingData
+                        ? 'Carregando parques...'
+                        : 'Selecionar parque'}
+                    </Text>
+                    <MaterialIcons name="keyboard-arrow-right" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.formField}>
+                  <Text style={styles.formLabel}>Obstáculo</Text>
+                  {selectedPark ? (
+                    <View style={styles.chipRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.chip,
+                          !selectedObstacle && styles.chipActive,
+                        ]}
+                        onPress={() => setSelectedObstacle(null)}
+                        activeOpacity={0.85}
+                      >
+                        <Text
+                          style={[
+                            styles.chipText,
+                            !selectedObstacle && styles.chipTextActive,
+                          ]}
+                        >
+                          Nenhum
+                        </Text>
+                      </TouchableOpacity>
+                      {filteredObstacles.map((obstacle) => {
+                        const isActive =
+                          obstacle.id === selectedObstacle ||
+                          obstacle.obstacle_id === selectedObstacle;
+                        return (
+                          <TouchableOpacity
+                            key={obstacle.id ?? obstacle.obstacle_id}
+                            style={[styles.chip, isActive && styles.chipActive]}
+                            onPress={() => setSelectedObstacle(obstacle.id ?? obstacle.obstacle_id)}
+                            activeOpacity={0.85}
+                          >
+                            <Text
+                              style={[styles.chipText, isActive && styles.chipTextActive]}
+                            >
+                              {obstacle.name || obstacle.title || `Obstáculo ${obstacle.id}`}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <View style={styles.obstaclePlaceholder}>
+                      <MaterialIcons name="info-outline" size={16} color={colors.textSecondary} />
+                      <Text style={styles.obstaclePlaceholderText}>
+                        Selecione um parque para listar os obstáculos disponíveis.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.formField}>
+                  <Text style={styles.formLabel}>Dificuldade</Text>
+                  <View style={styles.chipRow}>
+                    {DIFFICULTY_OPTIONS.map((option) => {
+                      const isActive = selectedDifficulty === option.id;
+                      return (
+                        <TouchableOpacity
+                          key={option.id}
+                          style={[styles.chip, isActive && styles.chipActive]}
+                          onPress={() => handleSelectDifficulty(option.id)}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                            {option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.formField}>
+                  <Text style={styles.formLabel}>Privacidade</Text>
+                  <View style={styles.chipRow}>
+                    {PRIVACY_OPTIONS.map((option) => {
+                      const isActive = privacy === option.id;
+                      return (
+                        <TouchableOpacity
+                          key={option.id}
+                          style={[styles.chip, isActive && styles.chipActive]}
+                          onPress={() => handleSelectPrivacy(option.id)}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                            {option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              </YupCard>
+            </View>
+          ) : null}
+
+          {currentStep === 3 ? (
+            <View style={styles.editStack}>
+              <YupCard style={styles.editorCard}>
+                <YupSectionHeader
+                  title="Editor rápido"
+                  subtitle="Ajuste os cortes, gere thumbnail e configure slow motion antes de publicar."
+                />
+
+                <View style={styles.editorSection}>
+                  <View style={styles.editorHeader}>
+                    <MaterialIcons name="content-cut" size={18} color={colors.primary} />
+                    <Text style={styles.editorTitle}>Corte do vídeo</Text>
+                  </View>
+                  <View style={styles.trimRow}>
+                    <View style={styles.trimTime}>
+                      <Text style={styles.trimLabel}>Início</Text>
+                      <Text style={styles.trimValue}>{formatTimestamp(trimStart)}</Text>
+                    </View>
+                    <Slider
+                      style={styles.trimSlider}
+                      minimumValue={0}
+                      maximumValue={Math.max(videoDuration, MIN_TRIM_DURATION)}
+                      minimumTrackTintColor={colors.primary}
+                      maximumTrackTintColor={colors.surfaceMuted}
+                      thumbTintColor={colors.primary}
+                      step={1}
+                      value={trimStart}
+                      onValueChange={(value) =>
+                        setTrimStart(Math.min(value, trimEnd - MIN_TRIM_DURATION))
+                      }
+                      onSlidingComplete={(value) =>
+                        setTrimStart(Math.min(value, trimEnd - MIN_TRIM_DURATION))
+                      }
+                    />
+                  </View>
+                  <View style={styles.trimRow}>
+                    <View style={styles.trimTime}>
+                      <Text style={styles.trimLabel}>Fim</Text>
+                      <Text style={styles.trimValue}>{formatTimestamp(trimEnd)}</Text>
+                    </View>
+                    <Slider
+                      style={styles.trimSlider}
+                      minimumValue={MIN_TRIM_DURATION}
+                      maximumValue={Math.max(videoDuration, MIN_TRIM_DURATION)}
+                      minimumTrackTintColor={colors.primary}
+                      maximumTrackTintColor={colors.surfaceMuted}
+                      thumbTintColor={colors.primary}
+                      step={1}
+                      value={trimEnd}
+                      onValueChange={(value) =>
+                        setTrimEnd(Math.max(value, trimStart + MIN_TRIM_DURATION))
+                      }
+                      onSlidingComplete={(value) =>
+                        setTrimEnd(Math.max(value, trimStart + MIN_TRIM_DURATION))
+                      }
+                    />
+                  </View>
+                  <View style={styles.trimSummary}>
+                    <MaterialIcons name="timelapse" size={16} color={colors.textSecondary} />
+                    <Text style={styles.trimSummaryText}>
+                      Duração estimada: {formatTimestamp((trimEnd - trimStart) * slowMotionFactor)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.editorSection}>
+                  <View style={styles.editorHeader}>
+                    <MaterialIcons name="photo" size={18} color={colors.primary} />
+                    <Text style={styles.editorTitle}>Thumbnail personalizada</Text>
+                  </View>
+
+                  <View style={styles.thumbnailPreviewArea}>
+                    {thumbnailPreview ? (
+                      <ImageBackground
+                        source={{ uri: thumbnailPreview }}
+                        style={styles.thumbnailImage}
+                        imageStyle={styles.thumbnailImage}
+                      >
+                        <View style={styles.thumbnailOverlay}>
+                          <MaterialIcons name="collections" size={18} color={colors.surface} />
+                          <Text style={styles.thumbnailOverlayText}>
+                            {formatTimestamp(thumbnailTime)}
+                          </Text>
+                        </View>
+                      </ImageBackground>
+                    ) : (
+                      <View style={styles.thumbnailPlaceholder}>
+                        <MaterialIcons name="image" size={24} color={colors.textSecondary} />
+                        <Text style={styles.thumbnailPlaceholderText}>Gerar thumbnail</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <Slider
+                    style={styles.thumbnailSlider}
+                    minimumValue={trimStart}
+                    maximumValue={trimEnd}
+                    minimumTrackTintColor={colors.primary}
+                    maximumTrackTintColor={colors.surfaceMuted}
+                    thumbTintColor={colors.primary}
+                    step={1}
+                    value={thumbnailTime}
+                    onValueChange={(value) => setThumbnailTime(value)}
+                    onSlidingComplete={(value) => handleGenerateThumbnail(value)}
+                  />
+
+                  <YupButton
+                    title={isGeneratingThumbnail ? 'Gerando thumbnail...' : 'Atualizar thumbnail'}
+                    onPress={() => handleGenerateThumbnail(thumbnailTime)}
+                    isLoading={isGeneratingThumbnail}
+                    disabled={isGeneratingThumbnail}
+                    variant="secondary"
+                  />
+                </View>
+
+                <View style={styles.editorSection}>
+                  <View style={styles.editorHeader}>
+                    <MaterialIcons name="slow-motion-video" size={18} color={colors.primary} />
+                    <Text style={styles.editorTitle}>Frame rate & slow motion</Text>
+                  </View>
+
+                  <View style={styles.frameRateRow}>
+                    <View style={styles.frameRateInfo}>
+                      <Text style={styles.trimLabel}>Frame rate alvo</Text>
+                      <Text style={styles.trimValue}>{`${targetFrameRate} fps`}</Text>
+                    </View>
+                    <Slider
+                      style={styles.frameRateSlider}
+                      minimumValue={15}
+                      maximumValue={60}
+                      step={5}
+                      minimumTrackTintColor={colors.primary}
+                      maximumTrackTintColor={colors.surfaceMuted}
+                      thumbTintColor={colors.primary}
+                      value={targetFrameRate}
+                      onValueChange={(value) => setTargetFrameRate(Math.round(value))}
+                    />
+                  </View>
+
+                  <View style={styles.frameRateRow}>
+                    <View style={styles.frameRateInfo}>
+                      <Text style={styles.trimLabel}>Fator slow motion</Text>
+                      <Text style={styles.trimValue}>
+                        {slowMotionFactor === 1 ? 'Normal' : `${slowMotionFactor.toFixed(2)}x`}
+                      </Text>
+                    </View>
+                    <Slider
+                      style={styles.frameRateSlider}
+                      minimumValue={0.25}
+                      maximumValue={2}
+                      step={0.05}
+                      minimumTrackTintColor={colors.primary}
+                      maximumTrackTintColor={colors.surfaceMuted}
+                      thumbTintColor={colors.primary}
+                      value={slowMotionFactor}
+                      onValueChange={(value) =>
+                        setSlowMotionFactor(Number(value.toFixed(2)))
+                      }
+                    />
+                  </View>
+
+                  <View style={styles.speedSummary}>
+                    <View>
+                      <Text style={styles.speedSummaryTitle}>Trecho em slow</Text>
+                      {hasSlowMotion ? (
+                        <Text style={styles.speedSummarySubtitle}>
+                          {formatTimestamp(slowMotionStart)} → {formatTimestamp(slowMotionEnd)} (
+                          {formatTimestamp(slowMotionDuration)})
+                        </Text>
+                      ) : (
+                        <Text style={styles.speedSummarySubtitle}>
+                          Ajuste os controles para aplicar slow motion.
+                        </Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.speedSummaryButton,
+                        !hasSlowMotion && styles.speedSummaryButtonDisabled,
+                      ]}
+                      onPress={handleResetSlowMotion}
+                      disabled={!hasSlowMotion}
+                    >
+                      <MaterialIcons name="restart-alt" size={18} color={colors.textPrimary} />
+                      <Text style={styles.speedSummaryButtonText}>Resetar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <YupButton
+                  title="Abrir editor em tela cheia"
+                  variant="ghost"
+                  onPress={() => setShowEditorModal(true)}
+                  icon={<MaterialIcons name="open-in-full" size={18} color={colors.primary} />}
+                />
+              </YupCard>
+
+              <YupButton
+                title={isUploading ? 'Enviando...' : 'Publicar vídeo'}
+                onPress={handleSubmit}
+                isLoading={isUploading}
+                disabled={isUploading}
+              />
+            </View>
+          ) : null}
+        </View>
       </ScrollView>
+      {renderParkModal()}
+      {renderEditorModal()}
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing['3xl'],
+    paddingTop: spacing['2xl'],
+    gap: spacing['3xl'],
+  },
+  header: {
+    gap: spacing.sm,
+  },
+  headerBadge: {
+    alignSelf: 'flex-start',
+  },
+  headerTitle: {
+    fontSize: typography.sizes['3xl'],
+    fontWeight: typography.weights.extrabold,
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: typography.sizes.md,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.md * typography.lineHeights.relaxed,
+    maxWidth: '92%',
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing['2xl'],
+    marginBottom: spacing.xl,
+  },
+  stepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  stepBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBadgeActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
+  stepBadgeComplete: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  stepBadgeDisabled: {
+    borderColor: colors.borderMuted,
+    backgroundColor: colors.surfaceMuted,
+  },
+  stepBadgeText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.textSecondary,
+  },
+  stepLabel: {
+    fontSize: typography.sizes.md,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.medium,
+  },
+  stepLabelActive: {
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  stepLabelDisabled: {
+    color: colors.textSecondary,
+    opacity: 0.5,
+  },
+  stepConnector: {
+    width: 24,
+    height: 2,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.sm,
+  },
+  stepConnectorActive: {
+    backgroundColor: colors.primary,
+  },
+  stepContent: {
+    gap: spacing['2xl'],
+    marginBottom: spacing['3xl'],
+  },
+  maneuverStack: {
+    gap: spacing['2xl'],
+  },
+  maneuverTypeCard: {
+    padding: spacing.xl,
+    gap: spacing.lg,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  maneuverTypeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  maneuverTypeOption: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexBasis: '48%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  maneuverTypeOptionActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
+  maneuverTypeLabel: {
+    fontSize: typography.sizes.md,
+    color: colors.textSecondary,
+  },
+  maneuverTypeLabelActive: {
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
+  },
+  maneuverPlaceholderCard: {
+    padding: spacing.xl,
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  maneuverPlaceholderTitle: {
+    fontSize: typography.sizes.lg,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  maneuverPlaceholderText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.sm * typography.lineHeights.relaxed,
+  },
+  componentCard: {
+    padding: spacing.xl,
+    gap: spacing.lg,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  displayNameHint: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.sm * typography.lineHeights.relaxed,
+  },
+  componentCardHeader: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  componentCardTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  componentCardSubtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.sm * typography.lineHeights.relaxed,
+    marginTop: spacing.xs / 2,
+  },
+  componentError: {
+    fontSize: typography.sizes.sm,
+    color: colors.danger,
+  },
+  componentLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  componentLoadingText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  componentDivision: {
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+  },
+  componentDivisionTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  componentDivisionHint: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  componentOptionList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  componentOption: {
+    flexBasis: '48%',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs / 2,
+  },
+  componentOptionActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
+  componentOptionName: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.medium,
+  },
+  componentOptionNameActive: {
+    color: colors.primary,
+  },
+  componentOptionXp: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+  },
+  formField: {
+    gap: spacing.xs,
+  },
+  formLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  maneuverHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  maneuverTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  resetButton: {
+    minHeight: 44,
+    alignSelf: 'flex-start',
+  },
+  resetButtonText: {
+    textTransform: 'none',
+    letterSpacing: 0.2,
+  },
+  uploadStack: {
+    gap: spacing['2xl'],
+  },
+  videoCard: {
+    padding: spacing.xl,
+    gap: spacing.lg,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  videoPreview: {
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  previewBackground: {
+    height: 180,
+    justifyContent: 'flex-end',
+  },
+  previewImage: {
+    resizeMode: 'cover',
+  },
+  previewOverlay: {
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  previewLabel: {
+    fontSize: typography.sizes.md,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  previewStatus: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  videoActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  maneuverSummary: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  maneuverSummaryCopy: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
+  maneuverSummaryLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  maneuverSummaryType: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.medium,
+  },
+  maneuverSummaryText: {
+    fontSize: typography.sizes.md,
+    color: colors.textPrimary,
+    lineHeight: typography.sizes.md * typography.lineHeights.relaxed,
+  },
+  maneuverSummaryPlaceholder: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  maneuverSummaryPlaceholderText: {
+    flex: 1,
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.sm * typography.lineHeights.relaxed,
+  },
+  videoMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  metaText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  progressTrack: {
+    height: 6,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.full,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: 6,
+    backgroundColor: colors.primary,
+    borderRadius: radii.full,
+  },
+  removeButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  removeButtonText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  metadataCard: {
+    padding: spacing.xl,
+    gap: spacing.lg,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  selectorText: {
+    flex: 1,
+    fontSize: typography.sizes.md,
+    color: colors.textPrimary,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surface,
+  },
+  chipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
+  chipText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  chipTextActive: {
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
+  },
+  editStack: {
+    gap: spacing['2xl'],
+  },
+  editorCard: {
+    padding: spacing.xl,
+    gap: spacing.lg,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  editorSection: {
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
+  },
+  editorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  editorTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  trimRow: {
+    gap: spacing.sm,
+  },
+  trimTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  trimLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  trimValue: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.medium,
+  },
+  trimSlider: {
+    width: '100%',
+  },
+  trimSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  trimSummaryText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  thumbnailPreviewArea: {
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  thumbnailImage: {
+    height: 140,
+    width: '100%',
+  },
+  thumbnailOverlay: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.lg,
+  },
+  thumbnailOverlayText: {
+    fontSize: typography.sizes.sm,
+    color: colors.surface,
+  },
+  thumbnailPlaceholder: {
+    height: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceMuted,
+  },
+  thumbnailPlaceholderText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  thumbnailSlider: {
+    width: '100%',
+  },
+  frameRateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  frameRateInfo: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
+  frameRateSlider: {
+    flex: 2,
+  },
+  speedSummary: {
+    marginTop: spacing.xs,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surfaceMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  speedSummaryTitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  speedSummarySubtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  speedSummaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.lg,
+  },
+  speedSummaryButtonDisabled: {
+    backgroundColor: colors.border,
+  },
+  speedSummaryButtonText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxHeight: '80%',
+    padding: spacing.lg,
+    gap: spacing.lg,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalTitle: {
+    fontSize: typography.sizes.lg,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  modalClose: {
+    padding: spacing.xs,
+  },
+  modalList: {
+    maxHeight: 360,
+  },
+  modalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalRowSelected: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  modalRowIcon: {
+    width: 32,
+    alignItems: 'center',
+  },
+  modalRowContent: {
+    flex: 1,
+  },
+  modalRowTitle: {
+    fontSize: typography.sizes.md,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.medium,
+  },
+  modalRowSubtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  editorSafeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  editorTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  editorTopButton: {
+    padding: spacing.xs,
+  },
+  editorTopTitle: {
+    fontSize: typography.sizes.md,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  editorScroll: {
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing['3xl'],
+    gap: spacing.lg,
+  },
+  editorVideoPreview: {
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.lg,
+  },
+  editorVideo: {
+    height: 240,
+  },
+  editorVideoOverlay: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.lg,
+  },
+  editorVideoOverlayText: {
+    fontSize: typography.sizes.sm,
+    color: colors.surface,
+  },
+  editorHint: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.sm * typography.lineHeights.relaxed,
+  },
+});

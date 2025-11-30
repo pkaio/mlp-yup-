@@ -61,7 +61,9 @@ async function notifyVideoOwner({ video, actor, event, commentContent = null }) 
   }
 
   const actorName = getDisplayName(actor);
-  const videoSnippet = truncate(video.description);
+  const maneuverMeta = video?.score_breakdown?.xp?.maneuver || {};
+  const maneuverName = (maneuverMeta?.name || video?.maneuver_name || '').trim();
+  const videoSnippet = truncate(maneuverName);
 
   let title;
   let message;
@@ -69,7 +71,9 @@ async function notifyVideoOwner({ video, actor, event, commentContent = null }) 
     video_id: video.id,
     actor_id: actor.id,
     actor_username: actor.username,
-    actor_full_name: actor.full_name
+    actor_full_name: actor.full_name,
+    maneuver_name: maneuverName || null,
+    maneuver_type: (maneuverMeta?.type || null),
   };
 
   if (event === 'like') {

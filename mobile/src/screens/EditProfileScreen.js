@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import YupCard from '../components/ui/YupCard';
 import YupSectionHeader from '../components/ui/YupSectionHeader';
 import YupButton from '../components/ui/YupButton';
@@ -125,11 +125,11 @@ export default function EditProfileScreen() {
               <Image source={{ uri: imageUrl }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Icon name="person" size={42} color={colors.textSecondary} />
+                <MaterialIcons name="person" size={42} color={colors.textSecondary} />
               </View>
             )}
             <View style={styles.cameraBadge}>
-              <Icon name="photo-camera" size={18} color={colors.textPrimary} />
+              <MaterialIcons name="photo-camera" size={18} color={colors.textPrimary} />
             </View>
           </TouchableOpacity>
           <Text style={styles.avatarHint}>Toque para alterar sua foto</Text>
@@ -162,7 +162,7 @@ export default function EditProfileScreen() {
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Email</Text>
             <View style={styles.disabledInput}>
-              <Icon name="mail-outline" size={18} color={colors.textSecondary} />
+              <MaterialIcons name="mail-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.disabledText}>{user.email}</Text>
             </View>
           </View>
@@ -170,7 +170,7 @@ export default function EditProfileScreen() {
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Nome de usuário</Text>
             <View style={styles.disabledInput}>
-              <Icon name="alternate-email" size={18} color={colors.textSecondary} />
+              <MaterialIcons name="alternate-email" size={18} color={colors.textSecondary} />
               <Text style={styles.disabledText}>@{user.username}</Text>
             </View>
           </View>
@@ -187,13 +187,13 @@ export default function EditProfileScreen() {
             {PREFERENCE_ITEMS.map((item) => (
               <TouchableOpacity key={item.key} style={styles.preferenceRow} activeOpacity={0.8}>
                 <View style={[styles.preferenceIcon, { backgroundColor: item.background }]}>
-                  <Icon name={item.icon} size={20} color={item.tint} />
+                  <MaterialIcons name={item.icon} size={20} color={item.tint} />
                 </View>
                 <View style={styles.preferenceContent}>
                   <Text style={styles.preferenceTitle}>{item.title}</Text>
                   <Text style={styles.preferenceSubtitle}>{item.subtitle}</Text>
                 </View>
-                <Icon name="chevron-right" size={20} color="rgba(148,163,184,0.7)" />
+                <MaterialIcons name="chevron-right" size={20} color="rgba(148,163,184,0.7)" />
               </TouchableOpacity>
             ))}
 
@@ -203,13 +203,13 @@ export default function EditProfileScreen() {
               onPress={handleLogout}
             >
               <View style={[styles.preferenceIcon, { backgroundColor: 'rgba(239,68,68,0.15)' }]}> 
-                <Icon name="logout" size={20} color={colors.danger} />
+                <MaterialIcons name="logout" size={20} color={colors.danger} />
               </View>
               <View style={styles.preferenceContent}>
                 <Text style={[styles.preferenceTitle, styles.preferenceDangerLabel]}>Sair</Text>
                 <Text style={styles.preferenceSubtitle}>Encerrar sessão atual</Text>
               </View>
-              <Icon name="chevron-right" size={20} color="rgba(239,68,68,0.7)" />
+              <MaterialIcons name="chevron-right" size={20} color="rgba(239,68,68,0.7)" />
             </TouchableOpacity>
           </View>
         </YupCard>

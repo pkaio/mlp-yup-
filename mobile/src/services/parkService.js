@@ -24,7 +24,7 @@ export const parkService = {
   // Get obstacles
   getObstacles: async () => {
     try {
-      const response = await api.get('/parks/obstacles');
+      const response = await api.get('/parks/obstacles-public');
       return response.data;
     } catch (error) {
       throw error;

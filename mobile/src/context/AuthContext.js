@@ -100,6 +100,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const verifyEmail = async (email, code) => {
+    try {
+      const response = await authService.verifyEmail(email, code);
+      if (response?.error) {
+        return { success: false, error: response.error };
+      }
+      return { success: true, message: response?.message };
+    } catch (error) {
+      console.error('Erro ao verificar e-mail:', error);
+      return { success: false, error: 'Erro ao conectar com o servidor' };
+    }
+  };
+
+  const resendVerification = async (email) => {
+    try {
+      const response = await authService.resendVerification(email);
+      if (response?.error) {
+        return { success: false, error: response.error };
+      }
+      return { success: true, message: response?.message };
+    } catch (error) {
+      console.error('Erro ao reenviar verificação:', error);
+      return { success: false, error: 'Erro ao conectar com o servidor' };
+    }
+  };
+
   const value = {
     user,
     token,
@@ -108,6 +134,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUser,
+    verifyEmail,
+    resendVerification,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -100,7 +100,9 @@ Content-Type: multipart/form-data
 
 **Body:**
 - `video` (file): Arquivo de vídeo
-- `description` (string): Descrição do vídeo
+- `maneuverName` (string): Nome ou prévia da manobra configurada
+- `maneuverType` (string): Estilo da manobra (`rail`, `kicker`, `air`, `surface`)
+- `expPayload` (JSON): Estrutura completa da manobra utilizada para cálculo de XP
 - `parkId` (string): ID do parque (opcional)
 - `obstacleId` (string): ID do obstáculo (opcional)
 
@@ -278,7 +280,9 @@ formData.append('video', {
   type: 'video/mp4',
   name: 'video.mp4'
 });
-formData.append('description', 'Minha manobra');
+formData.append('maneuverName', 'Railside 270');
+formData.append('maneuverType', 'rail');
+formData.append('expPayload', JSON.stringify(payloadExp));
 formData.append('parkId', 'park-uuid');
 
 const response = await fetch('/api/videos', {

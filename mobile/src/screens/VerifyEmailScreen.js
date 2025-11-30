@@ -47,10 +47,10 @@ export default function VerifyEmailScreen({ navigation }) {
     try {
       const result = await verifyEmail(email.trim(), code.trim());
       if (result.success) {
-        Alert.alert('Sucesso', 'E-mail verificado! Bem-vindo ao Y\'UP.', [
+        Alert.alert('Sucesso', result.message || 'E-mail verificado com sucesso.', [
           {
-            text: 'Continuar',
-            onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Main' }] }),
+            text: 'Fazer login',
+            onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
           },
         ]);
       } else {

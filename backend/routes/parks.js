@@ -37,12 +37,28 @@ const obstacleUpdateSchema = obstacleSchema.fork(
   (schema) => schema.optional(),
 );
 
+// Get all obstacles (public route)
+router.get('/obstacles-public', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name, type, description, latitude, longitude, difficulty_level, park_id
+      FROM obstacles
+      ORDER BY type ASC, difficulty_level ASC
+    `);
+
+    res.json({ obstacles: result.rows });
+  } catch (error) {
+    console.error('Erro ao buscar obstáculos:', error);
+    res.status(500).json({ error: 'Erro ao buscar obstáculos' });
+  }
+});
+
 // Get all parks
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
-        id, name, description, latitude, longitude, 
+      SELECT
+        id, name, description, latitude, longitude,
         address, website, phone, logo_url, created_at
       FROM parks
       WHERE is_active = true
@@ -354,7 +370,13 @@ router.get('/:id', async (req, res) => {
     // Get recent videos from this park
     const videosResult = await pool.query(`
       SELECT 
-        v.id, v.video_url, v.thumbnail_url, v.description, v.created_at,
+        v.id,
+        v.video_url,
+        v.thumbnail_url,
+        COALESCE(v.score_breakdown->'xp'->'maneuver'->>'name', NULL) AS maneuver_name,
+        COALESCE(v.score_breakdown->'xp'->'maneuver'->>'type', NULL) AS maneuver_type,
+        v.score_breakdown->'xp'->'maneuver'->'payload' AS maneuver_payload,
+        v.created_at,
         u.id as user_id, u.username, u.full_name, u.profile_image_url
       FROM videos v
       JOIN users u ON v.user_id = u.id
@@ -438,20 +460,20 @@ router.get('/nearby/:lat/:lng', async (req, res) => {
 
     const result = await pool.query(
       `
-        SELECT 
+        SELECT
           id, name, description, latitude, longitude, address,
           6371 * acos(
-            cos(radians($1)) * cos(radians(latitude)) * 
-            cos(radians(longitude) - radians($2)) + 
+            cos(radians($1)) * cos(radians(latitude)) *
+            cos(radians(longitude) - radians($2)) +
             sin(radians($1)) * sin(radians(latitude))
           ) as distance_km
         FROM parks
         WHERE is_active = true
-        HAVING 6371 * acos(
-          cos(radians($1)) * cos(radians(latitude)) * 
-          cos(radians(longitude) - radians($2)) + 
-          sin(radians($1)) * sin(radians(latitude))
-        ) <= $3
+          AND 6371 * acos(
+            cos(radians($1)) * cos(radians(latitude)) *
+            cos(radians(longitude) - radians($2)) +
+            sin(radians($1)) * sin(radians(latitude))
+          ) <= $3
         ORDER BY distance_km ASC
       `,
       [latitude, longitude, radius]

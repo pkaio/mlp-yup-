@@ -1,0 +1,543 @@
+{
+  "Approach": [
+    {
+      "approach_id": "hs",
+      "shortcut": "HS",
+      "description": "Heelside approach using the heelside edge.",
+      "xp": 2,
+      "display_name": "Heelside approach using the heelside edge."
+    },
+    {
+      "approach_id": "ts",
+      "shortcut": "TS",
+      "description": "Toeside approach using the toeside edge.",
+      "xp": 3,
+      "display_name": "Toeside approach using the toeside edge."
+    },
+    {
+      "approach_id": "sw_hs",
+      "shortcut": "SW HS",
+      "description": "Switch stance, heelside approach.",
+      "xp": 3,
+      "display_name": "Switch stance, heelside approach."
+    },
+    {
+      "approach_id": "sw_ts",
+      "shortcut": "SW TS",
+      "description": "Switch stance, toeside approach.",
+      "xp": 4,
+      "display_name": "Switch stance, toeside approach."
+    },
+    {
+      "approach_id": "none",
+      "shortcut": null,
+      "description": "No defined approach.",
+      "xp": 0,
+      "display_name": "No defined approach."
+    }
+  ],
+  "Entry": [
+    {
+      "entry_id": "ollie_on",
+      "shortcut": "ollie",
+      "description": "Ollie onto the feature.",
+      "xp": 3,
+      "display_name": "Ollie onto the feature."
+    },
+    {
+      "entry_id": "transfer",
+      "shortcut": "transfer",
+      "description": "Jump/transfer from one part of the feature or obstacle to another.",
+      "xp": 5,
+      "display_name": "Jump/transfer from one part of the feature or obstacle to another."
+    },
+    {
+      "entry_id": "none",
+      "shortcut": null,
+      "description": "No specific entry.",
+      "xp": 0,
+      "display_name": "No specific entry."
+    }
+  ],
+  "IN": [
+    {
+      "x": "none",
+      "spin_dir": "NONE",
+      "spin_deg": 0,
+      "xp": 0,
+      "shortcut": null
+    },
+    {
+      "x": "FS90_in",
+      "spin_dir": "FS",
+      "spin_deg": 90,
+      "xp": 10,
+      "shortcut": "FS90 IN"
+    },
+    {
+      "x": "FS180_in",
+      "spin_dir": "FS",
+      "spin_deg": 180,
+      "xp": 12,
+      "shortcut": "FS180 IN"
+    },
+    {
+      "x": "FS270_in",
+      "spin_dir": "FS",
+      "spin_deg": 270,
+      "xp": 20,
+      "shortcut": "FS270 IN"
+    },
+    {
+      "x": "FS360_in",
+      "spin_dir": "FS",
+      "spin_deg": 360,
+      "xp": 22,
+      "shortcut": "FS360 IN"
+    },
+    {
+      "x": "FS450_in",
+      "spin_dir": "FS",
+      "spin_deg": 450,
+      "xp": 30,
+      "shortcut": "FS450 IN"
+    },
+    {
+      "x": "FS540_in",
+      "spin_dir": "FS",
+      "spin_deg": 540,
+      "xp": 32,
+      "shortcut": "FS540 IN"
+    },
+    {
+      "x": "BS720_in",
+      "spin_dir": "BS",
+      "spin_deg": 720,
+      "xp": 40,
+      "shortcut": "BS720 IN"
+    },
+    {
+      "x": "BS90_in",
+      "spin_dir": "BS",
+      "spin_deg": 90,
+      "xp": 15,
+      "shortcut": "BS90 IN"
+    },
+    {
+      "x": "BS180_in",
+      "spin_dir": "BS",
+      "spin_deg": 180,
+      "xp": 17,
+      "shortcut": "BS180 IN"
+    },
+    {
+      "x": "BS270_in",
+      "spin_dir": "BS",
+      "spin_deg": 270,
+      "xp": 25,
+      "shortcut": "BS270 IN"
+    },
+    {
+      "x": "BS360_in",
+      "spin_dir": "BS",
+      "spin_deg": 360,
+      "xp": 27,
+      "shortcut": "BS360 IN"
+    },
+    {
+      "x": "BS450_in",
+      "spin_dir": "BS",
+      "spin_deg": 450,
+      "xp": 35,
+      "shortcut": "BS450 IN"
+    },
+    {
+      "x": "BS540_in",
+      "spin_dir": "BS",
+      "spin_deg": 540,
+      "xp": 37,
+      "shortcut": "BS540 IN"
+    }
+  ],
+  "Grabs": [
+    {
+      "grab_id": "indy",
+      "shortcut": "Indy",
+      "side": "Toe-side",
+      "hand_used": "Back hand",
+      "description": "Mão traseira segurando a borda toe-side entre as bindings.",
+      "xp": 10,
+      "display_name": "Mão traseira segurando a borda toe-side entre as bindings."
+    },
+    {
+      "grab_id": "tindy",
+      "shortcut": "Tindy",
+      "side": "Toe-side",
+      "hand_used": "Back hand",
+      "description": "Mão traseira segurando a borda toe-side entre o pé traseiro e o tail.",
+      "xp": 10,
+      "display_name": "Mão traseira segurando a borda toe-side entre o pé traseiro e o tail."
+    },
+    {
+      "grab_id": "tail",
+      "shortcut": "Tail",
+      "side": "Tail",
+      "hand_used": "Back hand",
+      "description": "Mão traseira segurando o tail da prancha.",
+      "xp": 10,
+      "display_name": "Mão traseira segurando o tail da prancha."
+    },
+    {
+      "grab_id": "tailfish",
+      "shortcut": "Tailfish",
+      "side": "Heel-side",
+      "hand_used": "Back hand",
+      "description": "Borda heel-side atrás da binding traseira.",
+      "xp": 15,
+      "display_name": "Borda heel-side atrás da binding traseira."
+    },
+    {
+      "grab_id": "stalefish",
+      "shortcut": "Stalefish",
+      "side": "Heel-side",
+      "hand_used": "Back hand",
+      "description": "Mão traseira segurando o heel-side entre as bindings.",
+      "xp": 15,
+      "display_name": "Mão traseira segurando o heel-side entre as bindings."
+    },
+    {
+      "grab_id": "melon",
+      "shortcut": "Melon",
+      "side": "Heel-side",
+      "hand_used": "Front hand",
+      "description": "Mão dianteira segurando o heel-side entre as bindings.",
+      "xp": 10,
+      "display_name": "Mão dianteira segurando o heel-side entre as bindings."
+    },
+    {
+      "grab_id": "mute",
+      "shortcut": "Mute",
+      "side": "Toe-side",
+      "hand_used": "Front hand",
+      "description": "Mão dianteira segurando o toe-side entre as bindings.",
+      "xp": 10,
+      "display_name": "Mão dianteira segurando o toe-side entre as bindings."
+    },
+    {
+      "grab_id": "method",
+      "shortcut": "Method",
+      "side": "Heel-side",
+      "hand_used": "Front hand",
+      "description": "Method grab clássico.",
+      "xp": 10,
+      "display_name": "Method grab clássico."
+    },
+    {
+      "grab_id": "nose",
+      "shortcut": "Nose",
+      "side": "Nose",
+      "hand_used": "Front hand",
+      "description": "Mão dianteira segurando o nose.",
+      "xp": 10,
+      "display_name": "Mão dianteira segurando o nose."
+    },
+    {
+      "grab_id": "slob",
+      "shortcut": "Slob",
+      "side": "Toe-side",
+      "hand_used": "Front hand",
+      "description": "Mão dianteira segurando o toe-side com estilo slob.",
+      "xp": 10,
+      "display_name": "Mão dianteira segurando o toe-side com estilo slob."
+    },
+    {
+      "grab_id": "crail",
+      "shortcut": "Crail",
+      "side": "Toe-side",
+      "hand_used": "Back hand",
+      "description": "Mão traseira segurando o nose (toe-side).",
+      "xp": 15,
+      "display_name": "Mão traseira segurando o nose (toe-side)."
+    },
+    {
+      "grab_id": "judo",
+      "shortcut": "Judo",
+      "side": "Tail",
+      "hand_used": "Front hand",
+      "description": "Judo kick grab.",
+      "xp": 15,
+      "display_name": "Judo kick grab."
+    },
+    {
+      "grab_id": "seatbelt",
+      "shortcut": "Seatbelt",
+      "side": "Toe-side",
+      "hand_used": "Front hand",
+      "description": "Seatbelt grab.",
+      "xp": 10,
+      "display_name": "Seatbelt grab."
+    },
+    {
+      "grab_id": "truckdriver",
+      "shortcut": "Truckdriver",
+      "side": "Both",
+      "hand_used": "Both",
+      "description": "Truckdriver grab com as duas mãos.",
+      "xp": 20,
+      "display_name": "Truckdriver grab com as duas mãos."
+    },
+    {
+      "grab_id": "none",
+      "shortcut": null,
+      "side": null,
+      "hand_used": null,
+      "description": "Nenhum grab selecionado.",
+      "xp": 0,
+      "display_name": "Nenhum grab selecionado."
+    }
+  ],
+  "Base_Moves": [
+    {
+      "base_id": "5050",
+      "family": "rail",
+      "description": "50/50",
+      "xp": 10,
+      "shortcut": "50/50"
+    },
+    {
+      "base_id": "bs_boardslide",
+      "family": "rail",
+      "description": "BS Boardslide",
+      "xp": 15,
+      "shortcut": "BS Boardslide"
+    },
+    {
+      "base_id": "front_lip",
+      "family": "rail",
+      "description": "Front lip",
+      "xp": 15,
+      "shortcut": "Front lip"
+    },
+    {
+      "base_id": "back_lip",
+      "family": "rail",
+      "description": "Back lip",
+      "xp": 16,
+      "shortcut": "Back lip"
+    },
+    {
+      "base_id": "frontboard",
+      "family": "rail",
+      "description": "Frontboard",
+      "xp": 16,
+      "shortcut": "Frontboard"
+    },
+    {
+      "base_id": "gap",
+      "family": "rail",
+      "description": "Gap on rail",
+      "xp": 18,
+      "shortcut": "Gap on rail"
+    },
+    {
+      "base_id": "rail_transfer",
+      "family": "rail",
+      "description": "Transfer between rails",
+      "xp": 20,
+      "shortcut": "rail to rail"
+    },
+    {
+      "base_id": "nosepress",
+      "family": "rail",
+      "description": "Nosepress",
+      "xp": 16,
+      "shortcut": "Nosepress"
+    },
+    {
+      "base_id": "tailpress",
+      "family": "rail",
+      "description": "Tailpress",
+      "xp": 16,
+      "shortcut": "Tailpress"
+    },
+    {
+      "base_id": "none",
+      "family": null,
+      "description": "No base move selected.",
+      "xp": 0,
+      "shortcut": null
+    }
+  ],
+  "OUT": [
+    {
+      "x": "none",
+      "spin_dir": "NONE",
+      "spin_deg": 0,
+      "xp": 0,
+      "shortcut": null
+    },
+    {
+      "x": "FS90_out",
+      "spin_dir": "FS",
+      "spin_deg": 90,
+      "xp": 10,
+      "shortcut": "FS90 OUT"
+    },
+    {
+      "x": "FS180_out",
+      "spin_dir": "FS",
+      "spin_deg": 180,
+      "xp": 12,
+      "shortcut": "FS180 OUT"
+    },
+    {
+      "x": "FS270_out",
+      "spin_dir": "FS",
+      "spin_deg": 270,
+      "xp": 20,
+      "shortcut": "FS270 OUT"
+    },
+    {
+      "x": "FS360_out",
+      "spin_dir": "FS",
+      "spin_deg": 360,
+      "xp": 22,
+      "shortcut": "FS360 OUT"
+    },
+    {
+      "x": "FS450_out",
+      "spin_dir": "FS",
+      "spin_deg": 450,
+      "xp": 30,
+      "shortcut": "FS450 OUT"
+    },
+    {
+      "x": "FS540_out",
+      "spin_dir": "FS",
+      "spin_deg": 540,
+      "xp": 32,
+      "shortcut": "FS540 OUT"
+    },
+    {
+      "x": "BS720_out",
+      "spin_dir": "BS",
+      "spin_deg": 720,
+      "xp": 40,
+      "shortcut": "BS720 OUT"
+    },
+    {
+      "x": "BS90_out",
+      "spin_dir": "BS",
+      "spin_deg": 90,
+      "xp": 15,
+      "shortcut": "BS90 OUT"
+    },
+    {
+      "x": "BS180_out",
+      "spin_dir": "BS",
+      "spin_deg": 180,
+      "xp": 17,
+      "shortcut": "BS180 OUT"
+    },
+    {
+      "x": "BS270_out",
+      "spin_dir": "BS",
+      "spin_deg": 270,
+      "xp": 25,
+      "shortcut": "BS270 OUT"
+    },
+    {
+      "x": "BS360_out",
+      "spin_dir": "BS",
+      "spin_deg": 360,
+      "xp": 27,
+      "shortcut": "BS360 OUT"
+    },
+    {
+      "x": "BS450_out",
+      "spin_dir": "BS",
+      "spin_deg": 450,
+      "xp": 35,
+      "shortcut": "BS450 OUT"
+    },
+    {
+      "x": "BS540_out",
+      "spin_dir": "BS",
+      "spin_deg": 540,
+      "xp": 37,
+      "shortcut": "BS540 OUT"
+    }
+  ],
+  "Modifiers": [
+    {
+      "modifier_id": "none",
+      "shortcut": null,
+      "description": "No additional modifier.",
+      "xp": 0,
+      "display_name": "No additional modifier."
+    },
+    {
+      "modifier_id": "switch",
+      "shortcut": "switch",
+      "description": "Riding with opposite foot forward (fakie).",
+      "xp": 5,
+      "display_name": "Riding with opposite foot forward (fakie)."
+    },
+    {
+      "modifier_id": "wrapped",
+      "shortcut": "wrapped",
+      "description": "Approach or execute spin with handle wrapped.",
+      "xp": 8,
+      "display_name": "Approach or execute spin with handle wrapped."
+    },
+    {
+      "modifier_id": "baller",
+      "shortcut": "baller",
+      "description": "Handle pass between the legs (baller).",
+      "xp": 10,
+      "display_name": "Handle pass between the legs (baller)."
+    },
+    {
+      "modifier_id": "ole",
+      "shortcut": "ole",
+      "description": "Rope passed above the head instead of handle pass.",
+      "xp": 10,
+      "display_name": "Rope passed above the head instead of handle pass."
+    },
+    {
+      "modifier_id": "rewind",
+      "shortcut": "rewind",
+      "description": "Rotation that changes direction mid-air.",
+      "xp": 10,
+      "display_name": "Rotation that changes direction mid-air."
+    },
+    {
+      "modifier_id": "to_fakie",
+      "shortcut": "to fakie",
+      "description": "Ending the trick to fakie.",
+      "xp": 6,
+      "display_name": "Ending the trick to fakie."
+    },
+    {
+      "modifier_id": "to_blind",
+      "shortcut": "to blind",
+      "description": "Ending the trick to blind.",
+      "xp": 8,
+      "display_name": "Ending the trick to blind."
+    },
+    {
+      "modifier_id": "to_revert",
+      "shortcut": "to revert",
+      "description": "Ending the trick roll-to-revert style.",
+      "xp": 6,
+      "display_name": "Ending the trick roll-to-revert style."
+    },
+    {
+      "modifier_id": "hp",
+      "shortcut": "hp",
+      "description": "Handle pass in the air.",
+      "xp": 12,
+      "display_name": "Handle pass in the air."
+    }
+  ]
+}

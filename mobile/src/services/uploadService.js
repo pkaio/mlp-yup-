@@ -1,5 +1,5 @@
 import { videoService } from './videoService';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export const uploadService = {
   /**
@@ -114,84 +114,186 @@ export const uploadService = {
   /**
    * Upload com progress tracking
    */
-  uploadWithProgress: async (videoData, onProgress) => {
+  uploadWithProgress: async (videoData, onProgress, options = {}) => {
     try {
+      const { signal } = options;
+      if (!videoData?.videoFile?.uri) {
+        throw new Error('Vídeo inválido. Selecione novamente.');
+      }
+
+      const fields = {};
+      if (videoData.maneuverType) {
+        fields.maneuverType = videoData.maneuverType;
+      }
+      if (videoData.maneuverName) {
+        fields.maneuverName = videoData.maneuverName;
+      }
+      if (videoData.maneuverDisplayName) {
+        fields.maneuverDisplayName = videoData.maneuverDisplayName;
+      }
+      if (videoData.maneuverPayload) {
+        fields.maneuverPayload = JSON.stringify(videoData.maneuverPayload);
+      }
+      if (videoData.maneuverDisplayName) {
+        fields.maneuverDisplayName = videoData.maneuverDisplayName;
+      }
+      if (videoData.trickShortName) {
+        fields.trickShortName = videoData.trickShortName;
+      }
+      if (videoData.expPayload) {
+        fields.expPayload = JSON.stringify(videoData.expPayload);
+      }
+      if (videoData.parkId) {
+        fields.parkId = videoData.parkId;
+      }
+      if (videoData.obstacleId) {
+        fields.obstacleId = videoData.obstacleId;
+      }
+      if (videoData.challengeId) {
+        fields.challengeId = videoData.challengeId;
+      }
+      if (videoData.visibility) {
+        fields.visibility = videoData.visibility;
+      }
+      if (videoData.trickId) {
+        fields.trickId = videoData.trickId;
+      }
+      if (videoData.questNodeId) {
+        fields.questNodeId = videoData.questNodeId;
+      }
+      if (videoData.clientUploadId) {
+        fields.clientUploadId = videoData.clientUploadId;
+      }
+      if (typeof videoData.trimStart === 'number') {
+        fields.trimStart = String(videoData.trimStart);
+      }
+      if (typeof videoData.trimEnd === 'number') {
+        fields.trimEnd = String(videoData.trimEnd);
+      }
+      if (typeof videoData.thumbnailTime === 'number') {
+        fields.thumbnailTime = String(videoData.thumbnailTime);
+      }
+      if (typeof videoData.targetFrameRate === 'number') {
+        fields.targetFrameRate = String(videoData.targetFrameRate);
+      }
+      if (typeof videoData.slowMotionFactor === 'number') {
+        fields.slowMotionFactor = String(videoData.slowMotionFactor);
+      }
+      if (typeof videoData.slowMotionStart === 'number') {
+        fields.slowMotionStart = String(videoData.slowMotionStart);
+      }
+      if (typeof videoData.slowMotionEnd === 'number') {
+        fields.slowMotionEnd = String(videoData.slowMotionEnd);
+      }
+
+      const token = await videoService.getToken();
+      const uploadUrl = `${videoService.API_BASE_URL}/videos`;
+      const mimeType = videoData.videoFile.type || 'video/mp4';
+
       const formData = new FormData();
-      
-      // Adicionar vídeo
       formData.append('video', {
         uri: videoData.videoFile.uri,
-        type: videoData.videoFile.type || 'video/mp4',
+        type: mimeType,
         name: videoData.videoFile.fileName || 'video.mp4',
       });
 
-      // Adicionar outros campos
-      if (videoData.description) {
-        formData.append('description', videoData.description);
-      }
-      if (videoData.parkId) {
-        formData.append('parkId', videoData.parkId);
-      }
-      if (videoData.obstacleId) {
-        formData.append('obstacleId', videoData.obstacleId);
-      }
-      if (videoData.challengeId) {
-        formData.append('challengeId', videoData.challengeId);
-      }
-      if (videoData.trickId) {
-        formData.append('trickId', videoData.trickId);
-      }
-      if (typeof videoData.trimStart === 'number') {
-        formData.append('trimStart', String(videoData.trimStart));
-      }
-      if (typeof videoData.trimEnd === 'number') {
-        formData.append('trimEnd', String(videoData.trimEnd));
-      }
-      if (typeof videoData.thumbnailTime === 'number') {
-        formData.append('thumbnailTime', String(videoData.thumbnailTime));
-      }
-      if (typeof videoData.targetFrameRate === 'number') {
-        formData.append('targetFrameRate', String(videoData.targetFrameRate));
-      }
-      if (typeof videoData.slowMotionFactor === 'number') {
-        formData.append('slowMotionFactor', String(videoData.slowMotionFactor));
-      }
-      // Campos adicionais (como visibility ou difficulty) ainda não são suportados pela API
+      Object.entries(fields).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value);
+        }
+      });
 
-      // Configurar tracking de progresso
-      const xhr = new XMLHttpRequest();
-      const token = await videoService.getToken();
-      
-      return new Promise((resolve, reject) => {
+      return await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let aborted = false;
+
+        if (signal) {
+          if (signal.aborted) {
+            return reject(new Error('Upload cancelado'));
+          }
+          const abortHandler = () => {
+            aborted = true;
+            xhr.abort();
+            reject(new Error('Upload cancelado'));
+          };
+          signal.addEventListener('abort', abortHandler, { once: true });
+        }
+
         xhr.upload.addEventListener('progress', (event) => {
           if (event.lengthComputable && onProgress) {
-            const progress = (event.loaded / event.total) * 100;
-            onProgress(Math.round(progress));
+            const percent = (event.loaded / event.total) * 100;
+            onProgress(Math.round(percent));
           }
         });
 
         xhr.addEventListener('load', () => {
-          if (xhr.status === 201) {
+          if (aborted) return;
+          const status = xhr.status;
+          const rawResponse = xhr.responseText;
+
+          if (status === 201) {
             try {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response);
-            } catch (error) {
+              const response = rawResponse ? JSON.parse(rawResponse) : {};
+              resolve({ statusCode: status, body: response });
+              return;
+            } catch (parseError) {
               reject(new Error('Erro ao processar resposta do servidor'));
+              return;
             }
-          } else {
-            reject(new Error(`Upload falhou: ${xhr.status}`));
           }
+
+          if (status === 202) {
+            try {
+              const response = rawResponse ? JSON.parse(rawResponse) : {};
+              resolve({ statusCode: status, body: response });
+              return;
+            } catch (parseError) {
+              resolve({ statusCode: status, body: null });
+              return;
+            }
+          }
+
+          if (status === 504) {
+            resolve({ statusCode: status, body: null, warning: 'Gateway timeout' });
+            return;
+          }
+
+          let errorMessage = `Upload falhou: ${status}`;
+          if (rawResponse) {
+            try {
+              const parsed = JSON.parse(rawResponse);
+              const serverMessage =
+                parsed?.error ||
+                parsed?.message ||
+                parsed?.details ||
+                parsed?.data?.error;
+              if (serverMessage) {
+                errorMessage = serverMessage;
+              }
+            } catch (_parseErr) {
+              const trimmed = rawResponse.trim();
+              if (trimmed) {
+                errorMessage = `${errorMessage} • ${trimmed.slice(0, 200)}`;
+              }
+            }
+          }
+
+          reject(new Error(errorMessage));
         });
 
         xhr.addEventListener('error', () => {
-          reject(new Error('Erro de rede durante upload'));
+          if (!aborted) {
+            reject(new Error('Erro de rede durante upload'));
+          }
         });
 
         xhr.addEventListener('abort', () => {
-          reject(new Error('Upload cancelado'));
+          if (!aborted) {
+            reject(new Error('Upload cancelado'));
+          }
         });
 
-        xhr.open('POST', `${videoService.API_BASE_URL}/videos`);
+        xhr.open('POST', uploadUrl);
         if (token) {
           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         }
@@ -215,6 +317,10 @@ export const uploadService = {
       maxRetries = 3,
       timeout = 120000,
     } = normalized;
+
+    if (!videoData.clientUploadId) {
+      videoData.clientUploadId = `mobile-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
 
     const response = await uploadService.uploadOptimized(videoData, {
       maxRetries,
@@ -258,20 +364,43 @@ export const uploadService = {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        const result = await uploadService.uploadWithProgress(videoData, (progress) => {
-          if (onProgress) {
-            onProgress(progress, attempt);
-          }
-        });
+        try {
+          const result = await uploadService.uploadWithProgress(
+            videoData,
+            (progress) => {
+              if (onProgress) {
+                onProgress(progress, attempt);
+              }
+            },
+            { signal: controller.signal }
+          );
 
-        clearTimeout(timeoutId);
-        
-        console.log('✅ Upload concluído com sucesso');
-        return {
-          success: true,
-          data: result,
-          attempts: attempt
-        };
+          const statusCode = result?.statusCode || 0;
+          if (statusCode === 201) {
+            console.log('✅ Upload concluído com sucesso');
+            return {
+              success: true,
+              data: result.body,
+              attempts: attempt,
+              serverProcessing: false
+            };
+          }
+
+          if (statusCode === 202 || statusCode === 504) {
+            console.log('✅ Upload recebido. Processamento continuará no servidor.');
+            return {
+              success: true,
+              data: result.body,
+              attempts: attempt,
+              serverProcessing: true,
+              warning: result?.warning
+            };
+          }
+
+          throw new Error('Upload respondeu com status inesperado');
+        } finally {
+          clearTimeout(timeoutId);
+        }
 
       } catch (error) {
         lastError = error;
@@ -291,11 +420,21 @@ export const uploadService = {
       }
     }
 
-    // Todas as tentativas falharam
+    if (lastError && /(504|timeout)/i.test(lastError.message || '')) {
+      console.warn('⚠️ Timeout/504 detectado após enviar vídeo. Assumindo que o servidor continuará o processamento.');
+      return {
+        success: true,
+        data: null,
+        attempts: attempt,
+        serverProcessing: true,
+        warning: lastError.message,
+      };
+    }
+
     console.error('❌ Todas as tentativas de upload falharam');
     return {
       success: false,
-      error: lastError.message || 'Upload falhou após várias tentativas',
+      error: lastError?.message || 'Upload falhou após várias tentativas',
       attempts: attempt
     };
   },

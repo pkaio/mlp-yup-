@@ -116,8 +116,10 @@ CREATE TABLE challenges (
     monthly_pass_id UUID REFERENCES monthly_passes(id) ON DELETE SET NULL,
     obstacle_ids UUID[] DEFAULT '{}',
     difficulty VARCHAR(50),
-    trick VARCHAR(120),
-    description TEXT,
+    maneuver_type VARCHAR(50) NOT NULL,
+    maneuver_name TEXT NOT NULL,
+    maneuver_payload JSONB DEFAULT '{}'::jsonb NOT NULL,
+    reward_xp INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -130,7 +132,6 @@ CREATE TABLE videos (
     trick_id UUID REFERENCES tricks(id) ON DELETE SET NULL,
     video_url VARCHAR(500) NOT NULL,
     thumbnail_url VARCHAR(500),
-    description TEXT,
     duration INTEGER, -- em segundos
     views_count INTEGER DEFAULT 0,
     likes_count INTEGER DEFAULT 0,
@@ -142,9 +143,14 @@ CREATE TABLE videos (
     compressed_size BIGINT, -- tamanho comprimido em bytes
     compression_ratio DECIMAL(5,2), -- porcentagem de compressão
     processing_time INTEGER, -- tempo de processamento em segundos
+    client_upload_id VARCHAR(64),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX idx_videos_user_client_upload
+    ON videos(user_id, client_upload_id)
+    WHERE client_upload_id IS NOT NULL;
 
 -- Challenge Completions
 CREATE TABLE user_challenge_completions (

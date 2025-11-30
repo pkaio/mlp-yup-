@@ -17,8 +17,18 @@ export const challengeService = {
   },
 
   async getMonthlyPasses(params = {}) {
-    const response = await api.get('/challenges/monthly-passes', { params });
-    return response.data?.monthlyPasses ?? [];
+    const response = await api.get('/challenges/monthly-passes/public', { params });
+    const passes = response.data?.monthlyPasses ?? [];
+    return passes.map((pass) => ({
+      ...pass,
+      isJoined: Boolean(pass.is_joined ?? pass.isJoined),
+      joinedAt: pass.joined_at ?? pass.joinedAt ?? null,
+    }));
+  },
+
+  async joinMonthlyPass(passId) {
+    const response = await api.post(`/challenges/monthly-passes/${passId}/join`);
+    return response.data;
   },
 
   async getCompletions() {

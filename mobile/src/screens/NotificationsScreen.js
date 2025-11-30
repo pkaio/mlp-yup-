@@ -10,27 +10,28 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import YupHeader from '../components/ui/YupHeader';
 import YupCard from '../components/ui/YupCard';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 import { notificationService } from '../services/notificationService';
 import { useFocusEffect } from '@react-navigation/native';
+const Icon = MaterialIcons;
 
 function typeIcon(type) {
   switch (type) {
     case 'like':
-      return <Icon name="favorite" size={18} color="#EF4444" />;
+      return <MaterialIcons name="favorite" size={18} color="#EF4444" />;
     case 'comment':
-      return <Icon name="chat-bubble" size={18} color="#00BFFF" />;
+      return <MaterialIcons name="chat-bubble" size={18} color="#00BFFF" />;
     case 'follow':
-      return <Icon name="person-add-alt-1" size={18} color="#22C55E" />;
+      return <MaterialIcons name="person-add-alt-1" size={18} color="#22C55E" />;
     case 'achievement':
-      return <Icon name="emoji-events" size={18} color={colors.primary} />;
+      return <MaterialIcons name="emoji-events" size={18} color={colors.primary} />;
     case 'xp':
-      return <Icon name="trending-up" size={18} color={colors.primary} />;
+      return <MaterialIcons name="trending-up" size={18} color={colors.primary} />;
     default:
-      return <Icon name="notifications" size={18} color={colors.textSecondary} />;
+      return <MaterialIcons name="notifications" size={18} color={colors.textSecondary} />;
   }
 }
 
@@ -168,7 +169,7 @@ export default function NotificationsScreen() {
   const renderEmpty = useCallback(
     () => (
       <View style={styles.empty}>
-        <Icon name="notifications-none" size={42} color={colors.textSecondary} />
+        <MaterialIcons name="notifications-none" size={42} color={colors.textSecondary} />
         <Text style={styles.emptyTitle}>Nenhuma notificação</Text>
         <Text style={styles.emptyText}>Interações aparecerão aqui</Text>
       </View>

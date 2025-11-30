@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../config/database');
 const { authMiddleware, optionalAuth } = require('../middleware/auth');
 const expSystem = require('../utils/expSystem');
+const { getUserSophisticationConfig, updateUserSophistication } = require('../utils/userSophistication');
 
 const isUuid = (value) =>
   typeof value === 'string' &&
@@ -548,6 +549,57 @@ router.get('/:id/following', optionalAuth, async (req, res) => {
   } catch (error) {
     console.error('Erro ao listar seguindo:', error);
     res.status(500).json({ error: 'Erro ao listar seguindo' });
+  }
+});
+
+// Get user sophistication level
+router.get('/:id/sophistication', async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (!isUuid(userId)) {
+      return res.status(400).json({ error: 'ID de usuário inválido' });
+    }
+
+    const config = await getUserSophisticationConfig(userId);
+
+    res.json({
+      level: config.level,
+      features: config.features,
+      config: config.config,
+      nextLevel: config.nextLevel
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar nível de sofisticação:', error);
+    res.status(500).json({ error: 'Erro ao buscar nível de sofisticação' });
+  }
+});
+
+// Update user sophistication level (recalculate)
+router.post('/:id/sophistication/recalculate', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (!isUuid(userId)) {
+      return res.status(400).json({ error: 'ID de usuário inválido' });
+    }
+
+    // Only allow users to update their own sophistication or admins/moderators
+    if (req.user.id !== userId && !['admin', 'super_moderator', 'moderator'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Sem permissão para atualizar este usuário' });
+    }
+
+    const newLevel = await updateUserSophistication(userId);
+
+    res.json({
+      message: 'Nível de sofisticação recalculado com sucesso',
+      level: newLevel
+    });
+
+  } catch (error) {
+    console.error('Erro ao recalcular nível de sofisticação:', error);
+    res.status(500).json({ error: 'Erro ao recalcular nível de sofisticação' });
   }
 });
 

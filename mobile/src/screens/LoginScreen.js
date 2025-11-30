@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,6 +27,28 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
+
+  const handleForgotPassword = async () => {
+    const supportEmail = 'support@yup.app';
+    const subject = encodeURIComponent('Recuperar senha - Y\'UP');
+    const body = encodeURIComponent('Olá time Y\'UP,\n\nPreciso de ajuda para recuperar o acesso à minha conta.\nE-mail cadastrado: ');
+    const mailto = `mailto:${supportEmail}?subject=${subject}&body=${body}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(mailto);
+      if (canOpen) {
+        await Linking.openURL(mailto);
+      } else {
+        Alert.alert('Contato', `Envie um e-mail para ${supportEmail} solicitando a recuperação da senha.`);
+      }
+    } catch (error) {
+      Alert.alert('Contato', `Envie um e-mail para ${supportEmail} solicitando a recuperação da senha.`);
+    }
+  };
+
+  const handleGoToVerification = () => {
+    navigation.navigate('VerifyEmail', { email });
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -107,8 +130,11 @@ export default function LoginScreen({ navigation }) {
               />
 
               <View style={styles.linkRow}>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={handleForgotPassword}>
                   <Text style={styles.link}>Esqueceu a senha?</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleGoToVerification}>
+                  <Text style={styles.link}>Verificar e-mail</Text>
                 </TouchableOpacity>
               </View>
 
@@ -214,6 +240,7 @@ const styles = StyleSheet.create({
   linkRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    gap: spacing.lg,
   },
   link: {
     color: colors.accent,

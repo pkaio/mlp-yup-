@@ -51,7 +51,7 @@
       ]
     ],
     "extra": {
-      "apiBaseUrl": "http://yupapp.us-east-2.elasticbeanstalk.com/api"
+      "apiBaseUrl": "https://y-up.app/api"
     }
   }
 }

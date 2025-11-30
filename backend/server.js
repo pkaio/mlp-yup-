@@ -15,18 +15,41 @@ const parkRoutes = require('./routes/parks');
 const notificationRoutes = require('./routes/notifications');
 const challengeRoutes = require('./routes/challenges');
 const trickRoutes = require('./routes/tricks');
-const expMetricRoutes = require('./routes/expMetrics');
 const dashboardRoutes = require('./routes/dashboard');
+const passesRoutes = require('./routes/passes');
+const specializationsRoutes = require('./routes/specializations');
+const skillTreeRoutes = require('./routes/skillTree');
+const skillTreeAdminRoutes = require('./routes/skillTreeAdmin');
+const componentAdminRoutes = require('./routes/componentAdmin');
+const skillComponentsRoutes = require('./routes/skillComponents');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', true);
 
-const allowedOrigins = (process.env.FRONTEND_URL || '')
+const allowedOriginsFromEnv = (process.env.FRONTEND_URL || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
+
+const additionalDevOrigins = [
+  'http://localhost:8081',
+  'http://127.0.0.1:8081',
+  'http://localhost:19006',
+  'http://127.0.0.1:19006',
+];
+
+const allowedOriginsSet = new Set(allowedOriginsFromEnv);
+
+if (process.env.NODE_ENV !== 'production') {
+  additionalDevOrigins.forEach((origin) => allowedOriginsSet.add(origin));
+  if (process.env.DEV_TUNNEL_ORIGIN) {
+    allowedOriginsSet.add(process.env.DEV_TUNNEL_ORIGIN.trim());
+  }
+}
+
+const allowedOrigins = Array.from(allowedOriginsSet);
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -60,8 +83,13 @@ app.use('/api/parks', parkRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/tricks', trickRoutes);
-app.use('/api/exp-metrics', expMetricRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/passes', passesRoutes);
+app.use('/api/specializations', specializationsRoutes);
+app.use('/api/skill-tree', skillTreeRoutes);
+app.use('/api/skill-tree-admin', skillTreeAdminRoutes);
+app.use('/api/admin', componentAdminRoutes);
+app.use('/api/skill-components', skillComponentsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -108,7 +136,19 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Rota não encontrada' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Ŷ'UP Backend rodando na porta ${PORT}`);
   console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
+// Increase default HTTP timeouts so large uploads have time to finish.
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
+if (server.keepAliveTimeout < FIVE_MINUTES_MS) {
+  server.keepAliveTimeout = FIVE_MINUTES_MS;
+}
+if (server.headersTimeout < FIVE_MINUTES_MS + 1000) {
+  server.headersTimeout = FIVE_MINUTES_MS + 1000; // headers timeout must be > keepAliveTimeout
+}
+if (server.requestTimeout < FIVE_MINUTES_MS) {
+  server.requestTimeout = FIVE_MINUTES_MS;
+}

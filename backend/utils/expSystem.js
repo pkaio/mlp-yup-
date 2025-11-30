@@ -1,26 +1,13 @@
 const pool = require('../config/database');
+const { updateUserSophistication } = require('./userSophistication');
+const { awardSpecializationXP } = require('./specializationSystem');
+const { completeQuest } = require('./skillTreeSystem');
+const { calculateManeuverXp, generateManeuverDescription } = require('./componentXpSystem');
 
 const LEVEL_CAP = 99;
 const XP_TOTAL_CAP = 1000000;
 const GROWTH_BASE = 200;
 const GROWTH_FACTOR = 1.05772872705916;
-
-const VIDEO_BASE_XP = 150;
-const VIDEO_PARK_BONUS = 35;
-const VIDEO_OBSTACLE_BONUS = 35;
-const VIDEO_DESCRIPTION_BONUS = 20;
-const VIDEO_CHALLENGE_BONUS = 120;
-const VIDEO_FIRST_OF_DAY_BONUS = 50;
-const VIDEO_FIRST_VIDEO_BONUS = 120;
-
-const TAG_METRIC_MAP = {
-  invert: 'invert',
-  railey: 'railey',
-  handlepass: 'handlepass',
-  blind: 'blind',
-  wrapped: 'wrapped',
-  switch: 'switch',
-};
 
 const buildXpTable = () => {
   const requirements = new Array(LEVEL_CAP + 1).fill(0);
@@ -116,235 +103,116 @@ const sanitizeBreakdown = (breakdown = []) => {
     .filter((item) => item.value > 0 && item.code && item.label);
 };
 
-const fetchExpMetrics = async (client) => {
-  const result = await client.query(
-    'SELECT code, display, exp_bonus FROM exp_metrics',
-  );
-  const map = new Map();
-  result.rows.forEach((row) => {
-    map.set(row.code, {
-      code: row.code,
-      display: row.display,
-      bonus: toInt(row.exp_bonus, 0),
-    });
-  });
-  return map;
-};
-
-const resolveTrick = async (client, context) => {
-  const { trickId = null, trickName = null, description = '' } = context;
-
-  if (trickId) {
-    const result = await client.query(
-      `
-        SELECT id, nome, nome_curto, descricao, variacoes, tags, exp_base
-          FROM tricks
-         WHERE id = $1
-         LIMIT 1
-      `,
-      [trickId],
-    );
-    if (result.rows.length > 0) {
-      return result.rows[0];
-    }
-  }
-
-  const candidate = (trickName || description || '').trim();
-  if (!candidate) {
-    return null;
-  }
-
-  const direct = await client.query(
-    `
-      SELECT id, nome, nome_curto, descricao, variacoes, tags, exp_base
-        FROM tricks
-       WHERE LOWER(nome) = LOWER($1)
-          OR LOWER(nome_curto) = LOWER($1)
-       LIMIT 1
-    `,
-    [candidate],
-  );
-  if (direct.rows.length > 0) {
-    return direct.rows[0];
-  }
-
-  const fuzzy = await client.query(
-    `
-      SELECT id, nome, nome_curto, descricao, variacoes, tags, exp_base
-        FROM tricks
-       WHERE LOWER(nome) LIKE $1
-          OR LOWER(nome_curto) LIKE $1
-       ORDER BY LENGTH(nome) ASC
-       LIMIT 1
-    `,
-    [`%${candidate.toLowerCase()}%`],
-  );
-
-  return fuzzy.rows[0] || null;
-};
-
-const collectSpinCodes = (text = '') => {
-  const matches = new Set();
-  const regex = /(180|360|540|720|900|1080|1260|1440)/g;
-  let found = regex.exec(text);
-  while (found) {
-    matches.add(found[1]);
-    found = regex.exec(text);
-  }
-  return Array.from(matches);
-};
-
+/**
+ * Calcula as contribuições de XP para um vídeo baseado no novo sistema de componentes
+ * Apenas XP da manobra + bônus opcional (challenges/quests)
+ */
 const calculateVideoContributions = async (client, context) => {
   const {
     userId,
     videoId,
-    parkId = null,
-    obstacleId = null,
+    maneuverPayload,
     challengeId = null,
-    trickId = null,
-    trickName = null,
-    description = '',
+    questNodeId = null,
   } = context;
 
+  // Validar que maneuverPayload existe
+  if (!maneuverPayload) {
+    throw new Error('maneuverPayload é obrigatório para calcular XP');
+  }
+
+  // 1. Calcular XP da manobra usando o sistema de componentes
+  const maneuverBreakdown = await calculateManeuverXp(maneuverPayload);
+
+  // 2. Montar contributions (detalhamento do XP)
   const contributions = [];
 
-  const push = (code, label, value, meta) => {
+  const push = (code, label, value, meta = {}) => {
     const xpValue = toInt(value, 0);
     if (xpValue <= 0) return;
-    contributions.push(meta ? { code, label, value: xpValue, meta } : { code, label, value: xpValue });
+    contributions.push({ code, label, value: xpValue, ...(Object.keys(meta).length > 0 ? { meta } : {}) });
   };
 
-  push('video.base', 'Upload de vídeo', VIDEO_BASE_XP);
+  // Adicionar cada divisão como contribuição
+  push('maneuver.approach', maneuverBreakdown.approach.name, maneuverBreakdown.approach.xp);
+  push('maneuver.entry', maneuverBreakdown.entry.name, maneuverBreakdown.entry.xp);
+  push('maneuver.spins', maneuverBreakdown.spins.name, maneuverBreakdown.spins.xp);
+  push('maneuver.grabs', maneuverBreakdown.grabs.name, maneuverBreakdown.grabs.xp);
+  push('maneuver.base_moves', maneuverBreakdown.base_moves.name, maneuverBreakdown.base_moves.xp);
 
-  if (parkId) {
-    push('video.park_tag', 'Parque identificado', VIDEO_PARK_BONUS, { parkId });
-  }
+  // Modifiers podem ser múltiplos
+  maneuverBreakdown.modifiers.forEach(modifier => {
+    push('maneuver.modifiers', modifier.name, modifier.xp);
+  });
 
-  if (obstacleId) {
-    push('video.obstacle_tag', 'Obstáculo marcado', VIDEO_OBSTACLE_BONUS, { obstacleId });
-  }
+  // 3. Buscar e adicionar bonus_xp se for challenge ou quest
+  let bonusXp = 0;
+  let bonusReason = null;
+  let specialization = null;
 
-  const hasDescription = typeof description === 'string' && description.trim().length >= 3;
-  if (hasDescription) {
-    push('video.description', 'Trick descrita', VIDEO_DESCRIPTION_BONUS);
-  }
-
+  // Bônus de Challenge
   if (challengeId) {
-    push('video.challenge_completion', 'Desafio concluído', VIDEO_CHALLENGE_BONUS, { challengeId });
-  }
-
-  const metricsMap = await fetchExpMetrics(client);
-  let trickData = null;
-
-  try {
-    trickData = await resolveTrick(client, { trickId, trickName, description });
-  } catch (trickError) {
-    console.warn('⚠️ Não foi possível resolver trick para XP:', trickError.message);
-  }
-
-  if (trickData) {
-    const trickTags = Array.isArray(trickData.tags) ? trickData.tags : [];
-    const trickBase = toInt(trickData.exp_base, 0);
-    if (trickBase > 0) {
-      push(
-        'trick.base',
-        `Trick • ${trickData.nome}`,
-        trickBase,
-        {
-          trickId: trickData.id,
-          trickName: trickData.nome,
-        },
+    try {
+      const challengeResult = await client.query(
+        'SELECT bonus_xp, maneuver_name FROM challenges WHERE id = $1',
+        [challengeId]
       );
+      if (challengeResult.rows.length > 0) {
+        const challenge = challengeResult.rows[0];
+        bonusXp += toInt(challenge.bonus_xp, 0);
+        bonusReason = `Desafio: ${challenge.maneuver_name}`;
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro ao buscar bônus de challenge:', error.message);
     }
+  }
 
-    const addMetricContribution = (code, label, extraMeta = {}) => {
-      if (!code || !metricsMap.has(code)) return;
-      const metric = metricsMap.get(code);
-      if (!metric || metric.bonus <= 0) return;
-      push(
-        `trick.metric.${metric.code}`,
-        label || metric.display,
-        metric.bonus,
-        {
-          trickId: trickData.id,
-          trickName: trickData.nome,
-          metric: metric.code,
-          ...extraMeta,
-        },
+  // Bônus de Quest
+  if (questNodeId) {
+    try {
+      const questResult = await client.query(
+        'SELECT bonus_xp, title, specialization FROM skill_tree_nodes WHERE id = $1',
+        [questNodeId]
       );
-    };
+      if (questResult.rows.length > 0) {
+        const quest = questResult.rows[0];
+        const questBonus = toInt(quest.bonus_xp, 0);
+        bonusXp += questBonus;
 
-    const baseText = `${trickData.nome} ${trickData.nome_curto || ''} ${trickData.descricao || ''} ${trickData.variacoes || ''}`.toLowerCase();
-    const spinCodes = collectSpinCodes(baseText);
-    spinCodes.forEach((value) => {
-      addMetricContribution(
-        `spin_${value}`,
-        `Spin ${value}`,
-        { spin: Number.parseInt(value, 10) },
-      );
-    });
+        const questLabel = `Quest: ${quest.title}`;
+        bonusReason = bonusReason ? `${bonusReason} + ${questLabel}` : questLabel;
 
-    trickTags
-      .map((tag) => String(tag || '').toLowerCase())
-      .filter(Boolean)
-      .forEach((tag) => {
-        const metricCode = TAG_METRIC_MAP[tag];
-        if (metricCode) {
-          addMetricContribution(metricCode);
+        // Capturar specialization da quest
+        if (quest.specialization) {
+          specialization = quest.specialization;
         }
-      });
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro ao buscar bônus de quest:', error.message);
+    }
   }
 
-  let previousVideosCount = 0;
-  let hasUploadToday = false;
-
-  if (userId) {
-    const previousVideosResult = await client.query(
-      `
-        SELECT COUNT(*)::int AS count 
-          FROM videos 
-         WHERE user_id = $1 
-           AND ($2::uuid IS NULL OR id <> $2::uuid)
-      `,
-      [userId, videoId || null],
-    );
-    previousVideosCount = previousVideosResult.rows[0]?.count ?? 0;
-
-    const sameDayResult = await client.query(
-      `
-        SELECT 1 
-          FROM videos 
-         WHERE user_id = $1 
-           AND ($2::uuid IS NULL OR id <> $2::uuid)
-           AND created_at >= DATE_TRUNC('day', NOW())
-         LIMIT 1
-      `,
-      [userId, videoId || null],
-    );
-    hasUploadToday = sameDayResult.rows.length > 0;
+  // Adicionar bônus se existe
+  if (bonusXp > 0 && bonusReason) {
+    push('bonus', bonusReason, bonusXp);
   }
 
-  const isFirstVideoEver = previousVideosCount === 0;
-  if (isFirstVideoEver) {
-    push('video.first_upload', 'Primeiro vídeo na comunidade', VIDEO_FIRST_VIDEO_BONUS);
-  }
+  // 4. Calcular total
+  const total = maneuverBreakdown.maneuver_total + bonusXp;
 
-  if (!hasUploadToday) {
-    push('video.first_of_day', 'Primeiro envio do dia', VIDEO_FIRST_OF_DAY_BONUS);
-  }
+  // 5. Gerar descrição da manobra
+  const maneuverDescription = generateManeuverDescription(maneuverBreakdown);
 
-  const total = contributions.reduce((sum, item) => sum + item.value, 0);
-  const flags = {
-    hasPark: Boolean(parkId),
-    hasObstacle: Boolean(obstacleId),
-    hasDescription,
-    challengeCompleted: Boolean(challengeId),
-    firstVideoEver: isFirstVideoEver,
-    firstUploadToday: !hasUploadToday,
-    trickResolved: Boolean(trickData),
+  return {
+    contributions,
+    total,
+    maneuver_total: maneuverBreakdown.maneuver_total,
+    bonus_xp: bonusXp,
+    bonus_reason: bonusReason,
+    component_breakdown: maneuverBreakdown,
+    maneuver_description: maneuverDescription,
+    specialization,
   };
-
-  return { contributions, total, flags };
 };
 
 const applyExp = async (client, payload) => {
@@ -469,15 +337,29 @@ const applyExp = async (client, payload) => {
 
 const handleVideoUpload = async (context) => {
   const client = await pool.connect();
+  let contributionsData = null;
+  let expResult = null;
+  let specializationResult = null;
 
   try {
     await client.query('BEGIN');
 
-    const contributionsData = await calculateVideoContributions(client, context);
+    // Calcular XP usando o novo sistema de componentes
+    contributionsData = await calculateVideoContributions(client, context);
 
-    const { contributions, total, flags } = contributionsData;
+    const {
+      contributions,
+      total,
+      maneuver_total,
+      bonus_xp,
+      bonus_reason,
+      component_breakdown,
+      maneuver_description,
+      specialization
+    } = contributionsData;
 
-    const expResult = await applyExp(client, {
+    // Aplicar XP ao usuário
+    expResult = await applyExp(client, {
       userId: context.userId,
       amount: total,
       videoId: context.videoId,
@@ -486,43 +368,129 @@ const handleVideoUpload = async (context) => {
       context: {
         type: 'video_upload',
         video_id: context.videoId,
-        flags,
+        maneuver: maneuver_description,
       },
     });
 
-    const xpPayload = {
-      total,
-      contributions,
-      flags,
-    };
-
+    // Atualizar vídeo com XP detalhado
     await client.query(
-      `
-        UPDATE videos
-           SET exp_awarded = $2,
-               score_breakdown = jsonb_set(
-                 COALESCE(score_breakdown, '{}'::jsonb),
-                 '{xp}',
-                 $3::jsonb,
-                 true
-               )
-         WHERE id = $1
-      `,
-      [context.videoId, total, JSON.stringify(xpPayload)],
+      `UPDATE videos
+       SET exp_awarded = $2,
+           maneuver_xp = $3,
+           bonus_xp = $4,
+           bonus_reason = $5,
+           component_breakdown = $6::jsonb,
+           score_breakdown = jsonb_set(
+             COALESCE(score_breakdown, '{}'::jsonb),
+             '{xp}',
+             $7::jsonb,
+             true
+           )
+       WHERE id = $1`,
+      [
+        context.videoId,
+        total,
+        maneuver_total,
+        bonus_xp,
+        bonus_reason,
+        JSON.stringify(component_breakdown),
+        JSON.stringify({
+          total,
+          maneuver_total,
+          bonus_xp,
+          contributions,
+          maneuver_description,
+        })
+      ]
     );
 
-    await client.query('COMMIT');
+    // Award specialization XP se a quest/manobra tiver specialization
+    if (specialization && maneuver_total > 0) {
+      try {
+        specializationResult = await awardSpecializationXP(
+          context.userId,
+          specialization,
+          maneuver_total,
+          null // Não temos trick_id no novo sistema
+        );
+        console.log(`✨ Awarded ${specializationResult.xpAwarded} specialization XP (${specialization})`);
+      } catch (specError) {
+        console.error('Error awarding specialization XP:', specError);
+        // Don't fail the entire upload if specialization XP fails
+      }
+    }
 
-    return {
-      video: xpPayload,
-      user: expResult,
-    };
+    await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();
   }
+
+  // Atualizar nível de sofisticação do usuário após o upload (fora da transação)
+  updateUserSophistication(context.userId).catch(err => {
+    console.error('Erro ao atualizar sophistication após upload:', err);
+  });
+
+  // Disparar processamento de quest de forma assíncrona (não bloquear upload)
+  if (context.questNodeId) {
+    setImmediate(() => {
+      completeQuest(
+        context.userId,
+        context.questNodeId,
+        context.videoId,
+        contributionsData ? contributionsData.total : 0
+      )
+        .then(async (questResult) => {
+          console.log(`🎯 Quest completed! Attempt #${questResult.attemptNumber}, Bonus: ${questResult.xp.bonus} XP`);
+
+          try {
+            await pool.query(
+              `UPDATE videos
+                 SET is_quest_video = true,
+                     quest_node_id = $1,
+                     quest_attempt_number = $2
+               WHERE id = $3`,
+              [context.questNodeId, questResult.attemptNumber, context.videoId]
+            );
+          } catch (updateError) {
+            console.error('Error updating video quest metadata:', updateError);
+          }
+        })
+        .catch((questError) => {
+          console.error('Error completing quest:', questError);
+          // Quando falhar, marcamos no vídeo para reprocessar manualmente
+          pool.query(
+            `UPDATE videos
+               SET quest_node_id = $1,
+                   is_quest_video = false,
+                   quest_attempt_number = NULL
+             WHERE id = $2`,
+            [context.questNodeId, context.videoId]
+          ).catch((updateError) => {
+            console.error('Error flagging quest failure on video:', updateError);
+          });
+        });
+    });
+  }
+
+  return {
+    video: contributionsData
+      ? {
+          total: contributionsData.total,
+          maneuver_total: contributionsData.maneuver_total,
+          bonus_xp: contributionsData.bonus_xp,
+          bonus_reason: contributionsData.bonus_reason,
+          contributions: contributionsData.contributions,
+          maneuver_description: contributionsData.maneuver_description,
+          component_breakdown: contributionsData.component_breakdown,
+        }
+      : null,
+    user: expResult,
+    specialization: specializationResult,
+    quest: context.questNodeId ? { status: 'processing' } : null,
+  };
 };
 
 const revokeVideoExp = async ({ userId, videoId }) => {
@@ -577,4 +545,5 @@ module.exports = {
   getNextLevelTarget,
   getXpSnapshot,
   revokeVideoExp,
+  calculateVideoContributions,
 };
